@@ -293,7 +293,7 @@ window.boatDevices = (items, message, action = "搜索设备", busy = false) => 
   el("again").disabled = busy;
   list.replaceChildren();
   const pairing = items.some((row) => row[3]);
-  for (const [name, address, bonded, pending] of items) {
+  for (const [name, address, bonded, pending, leOnly] of items) {
     const row = document.createElement("button");
     row.className = "device";
     const icon = new Image();
@@ -303,10 +303,11 @@ window.boatDevices = (items, message, action = "搜索设备", busy = false) => 
       title = document.createElement("b"),
       sub = document.createElement("small"),
       action = document.createElement("em");
-    title.textContent = name;
+    title.textContent = name || "未命名设备";
     sub.textContent = (bonded ? "已配对" : "附近设备") + " · " + address;
-    action.textContent = pending ? "配对中…" : bonded ? "连接" : "配对并连接";
-    row.disabled = pairing;
+    action.textContent = leOnly ? "仅 BLE" : pending ? "配对中…" : bonded ? "连接" : "配对并连接";
+    row.disabled = pairing || !!leOnly;
+    if (leOnly) row.title = "仅支持低功耗蓝牙，船控连接需要经典蓝牙串口";
     body.append(title, sub);
     row.append(icon, body, action);
     row.onclick = () => {

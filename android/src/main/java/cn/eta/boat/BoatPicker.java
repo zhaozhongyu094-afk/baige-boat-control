@@ -32,9 +32,8 @@ final class BoatPicker {
     private final BluetoothAdapter radio;
     private final Listener listener;
     private final Handler ui = new Handler(Looper.getMainLooper());
-    // Remember matching local discoveries between visits to the sheet. A new search replaces them.
+    // Keep all reported addresses, including devices whose name has not arrived yet.
     private final Map<String,String> nearby = new TreeMap<>();
-    private final Set<String> seen = new HashSet<>();
     private boolean visible, resumed, registered, scanning, ownScan, waitingForStart, waitingPermission, waitingEnable;
     private Action action = Action.NONE;
     private BluetoothDevice pairing;
@@ -48,13 +47,10 @@ final class BoatPicker {
         this.listener = listener;
     }
 
-    static final String TARGET_NAME = "jdy-31-spp";
-    static boolean accepts(String name, int type) {
-        return type != BluetoothDevice.DEVICE_TYPE_LE && TARGET_NAME.equalsIgnoreCase(name);
-    }
     String currentName(BluetoothDevice device) {
         String name = device.getName();
-        return name != null ? name : nearby.get(device.getAddress());
+        if (name == null || name.trim().isEmpty()) name = nearby.get(device.getAddress());
+        return name == null || name.trim().isEmpty() ? "未命名设备" : name;
     }
 
     void open() {
@@ -116,22 +112,19 @@ final class BoatPicker {
     }
 
     private JSONArray rows() {
-        Map<String,String> names = new TreeMap<>();
+        Map<String,String> names = new TreeMap<>(nearby);
         Set<String> bonded = new HashSet<>();
-        for (String address : nearby.keySet()) {
-            BluetoothDevice device=radio.getRemoteDevice(address);
-            String name=currentName(device);
-            if (accepts(name,device.getType())) names.put(address,name);
-        }
         for (BluetoothDevice device : radio.getBondedDevices()) {
-            String address=device.getAddress(), name=currentName(device);
-            if (accepts(name,device.getType())) { names.put(address,name); bonded.add(address); }
-            else names.remove(address);
+            String address=device.getAddress();
+            if (!names.containsKey(address)) names.put(address,currentName(device));
+            bonded.add(address);
         }
         JSONArray list=new JSONArray();
         for (Map.Entry<String,String> row : names.entrySet()) {
-            list.put(new JSONArray().put(row.getValue()).put(row.getKey()).put(bonded.contains(row.getKey()))
-                .put(pairing!=null && pairing.getAddress().equals(row.getKey())));
+            String address=row.getKey();
+            boolean leOnly=radio.getRemoteDevice(address).getType()==BluetoothDevice.DEVICE_TYPE_LE;
+            list.put(new JSONArray().put(row.getValue()).put(address).put(bonded.contains(address))
+                .put(pairing!=null && pairing.getAddress().equals(address)).put(leOnly));
         }
         return list;
     }
@@ -156,9 +149,9 @@ final class BoatPicker {
             say("搜索未能开始，请稍后手动重试。"); return;
         }
         scanning=true; ownScan=!existing; waitingForStart=!existing;
-        seen.clear(); nearby.clear();
+        nearby.clear();
         ui.postDelayed(scanTimeout, 25000);
-        say("正在搜索 " + TARGET_NAME + "…");
+        say("正在搜索附近的蓝牙设备…");
     }
 
     private void stopScan(boolean connecting) {
@@ -174,18 +167,20 @@ final class BoatPicker {
         boolean empty;
         try { empty=canConnect() && rows().length()==0; }
         catch (SecurityException e) { say("蓝牙权限已变化，请重新打开连接面板。"); return; }
-        say(empty ? "未找到 " + TARGET_NAME + (Build.VERSION.SDK_INT<31 ? "，请确认模块可被发现并开启手机定位后重试。" :
-            "，请确认模块名称和供电后手动搜索。") : "搜索完成");
+        say(empty ? (Build.VERSION.SDK_INT<31 ? "未发现设备，请确认设备可被发现并开启手机定位后重试。" :
+            "未发现设备，请确认设备已开启且可被发现后重试。") : "搜索完成");
     }
 
     void select(String address) {
         if (!visible || !resumed || pairing!=null || radio==null || !canConnect() || address==null || !BluetoothAdapter.checkBluetoothAddress(address)) return;
         try {
             BluetoothDevice device=radio.getRemoteDevice(address);
-            String name=currentName(device);
             boolean bonded=device.getBondState()==BluetoothDevice.BOND_BONDED;
-            if (!radio.isEnabled() || !accepts(name,device.getType()) || (!bonded && !nearby.containsKey(address))) {
+            if (!radio.isEnabled() || (!bonded && !nearby.containsKey(address))) {
                 say("这台设备当前不可用，请手动搜索。"); return;
+            }
+            if (device.getType()==BluetoothDevice.DEVICE_TYPE_LE) {
+                say("此设备仅支持低功耗蓝牙，船控连接需要经典蓝牙串口。"); return;
             }
             stopScan(true);
             if (bonded) { close(); listener.connect(device); return; }
@@ -201,9 +196,6 @@ final class BoatPicker {
     private void checkPair() {
         if (visible && resumed && pairing!=null && pairing.getBondState()==BluetoothDevice.BOND_BONDED) {
             BluetoothDevice device=pairing;
-            if (!accepts(currentName(device),device.getType())) {
-                pairFailed("设备名称已改变，请手动搜索。"); return;
-            }
             close(); listener.connect(device);
         }
     }
@@ -221,7 +213,7 @@ final class BoatPicker {
         String event=intent.getAction();
         if (BluetoothAdapter.ACTION_STATE_CHANGED.equals(event)) {
             int state=intent.getIntExtra(BluetoothAdapter.EXTRA_STATE,BluetoothAdapter.ERROR);
-            if (state==BluetoothAdapter.STATE_OFF) { stopScan(false); nearby.clear();seen.clear();pairFailed("蓝牙已关闭"); }
+            if (state==BluetoothAdapter.STATE_OFF) { stopScan(false); nearby.clear();pairFailed("蓝牙已关闭"); }
             else if (visible && state==BluetoothAdapter.STATE_ON) { say(""); advance(); }
             return;
         }
@@ -244,16 +236,14 @@ final class BoatPicker {
                 int bond=intent.getIntExtra(BluetoothDevice.EXTRA_BOND_STATE,BluetoothDevice.ERROR);
                 if (bond==BluetoothDevice.BOND_NONE) pairFailed("配对已取消或未成功，可重新点选。");
                 else if (bond==BluetoothDevice.BOND_BONDED) checkPair();
-            } else if (accepts(device.getName(),device.getType()) || nearby.containsKey(address)) say(message);
+            } else say(message);
             return;
         }
-        if (BluetoothDevice.ACTION_FOUND.equals(event) && scanning) { waitingForStart=false; seen.add(address); }
-        else if (!rename || (!seen.contains(address) && !nearby.containsKey(address))) return;
+        if (BluetoothDevice.ACTION_FOUND.equals(event) && scanning) waitingForStart=false;
+        else if (!rename || (!nearby.containsKey(address) && device.getBondState()!=BluetoothDevice.BOND_BONDED)) return;
         String name=intent.getStringExtra(BluetoothDevice.EXTRA_NAME);
-        if (name==null) name=device.getName();
-        if (accepts(name,device.getType())) {
-            if (!Objects.equals(nearby.put(address,name),name)) say(scanning ? message : "");
-        } else if (name!=null && nearby.remove(address)!=null) say(message);
+        if (name==null || name.trim().isEmpty()) name=currentName(device);
+        if (!Objects.equals(nearby.put(address,name),name)) say(message);
     }
 
     private void register() {

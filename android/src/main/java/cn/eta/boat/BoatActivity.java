@@ -169,8 +169,8 @@ public final class BoatActivity extends Activity {
     private void connect(BluetoothDevice device) {
         if (!foreground) return;
         String name=picker.currentName(device);
-        if (!BoatPicker.accepts(name,device.getType())) {
-            state("closed", "设备名称不匹配，请重新搜索 " + BoatPicker.TARGET_NAME);
+        if (device.getType()==BluetoothDevice.DEVICE_TYPE_LE) {
+            state("closed", "此设备仅支持低功耗蓝牙，船控连接需要经典蓝牙串口。");
             return;
         }
         generation++;

@@ -2,7 +2,7 @@
 
 电子科技协会 2026 船模设计大赛的安卓遥控器与 51 单片机固件。手机通过 JDY-31 经典蓝牙串口控制双桨，STC89C52RC 通过软件 PWM 驱动 L298，实现前后调速、差速转弯和原地转向。
 
-**[下载 v1.8.1 安卓安装包](https://github.com/zhaozhongyu094-afk/baige-boat-control/releases/download/v1.8.1/Baige-Boat-Control-v1.8.1.apk)** · [发布页](https://github.com/zhaozhongyu094-afk/baige-boat-control/releases/tag/v1.8.1) · [船控固件](dist/BoatPWM.hex) · [SHA-256 校验值](dist/SHA256SUMS)
+**[下载 v1.8.2 安卓安装包](https://github.com/zhaozhongyu094-afk/baige-boat-control/releases/download/v1.8.2/Baige-Boat-Control-v1.8.2.apk)** · [发布页](https://github.com/zhaozhongyu094-afk/baige-boat-control/releases/tag/v1.8.2) · [船控固件](dist/BoatPWM.hex) · [SHA-256 校验值](dist/SHA256SUMS)
 
 「珍珠银」和「深蓝金属」共用嵌入式双桨表窗、微凹拇指碟和停桨键。在「设置 → 界面皮肤」可切换。深色皮肤以石墨灰区分面板与操控盘，浅钢蓝指针显示当前桨力。[深色竖屏](docs/screens/graphite-portrait.png) · [深色横屏](docs/screens/graphite-landscape.png) · [珍珠银竖屏](docs/screens/pearl-portrait.png)
 
@@ -19,7 +19,7 @@
 ## 连接船模
 
 1. 用 STC-ISP 将 `dist/BoatPWM.hex` 烧录到 STC89C52RC。固件按 **11.0592 MHz、12T** 配置，JDY-31 串口使用 **9600、8N1**。
-2. 在 App 内点蓝牙按钮。设备列表、配对和连接均完整匹配经典蓝牙设备名称 `jdy-31-spp`，忽略大小写。列表里没有匹配项时自动搜索一轮，有匹配项时可手动刷新。同名船模按蓝牙地址区分。Android 12 及以上需要附近设备权限，旧版安卓搜索时需要定位权限。
+2. 在 App 内点蓝牙按钮。列表显示所有已配对设备和系统搜索到的附近设备，按蓝牙地址合并。未命名设备也会列出，同名设备可用地址区分。列表为空时自动搜索一轮，已有设备时可点「搜索设备」手动刷新。任意名称的经典蓝牙串口模块都可尝试连接，标记「仅 BLE」的设备供查看。Android 12 及以上需要附近设备权限，旧版安卓搜索时需要定位权限。
 3. 手机收到船端中位回执后进入就绪状态。首次联调先卸桨，检查正反转、左右转向、松手和断开连接后的停车表现。
 
 P2.0、P2.1 接 L298 的 IN1、IN2 控制右桨，P2.2、P2.3 接 IN3、IN4 控制左桨。软件 PWM 约为 125 Hz，每侧正反各 32 个非零占空比。面板读数是下发的 PWM 指令。控制帧、回执、序号、CRC 和失联停车机制见 [通信协议](docs/protocol.md)。
