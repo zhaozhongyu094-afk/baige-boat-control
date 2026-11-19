@@ -18,9 +18,12 @@ public final class BoatActivity extends Activity {
     private BoatLink link;
     private int generation;
     private boolean foreground, immersive;
+    private boolean lightSkin;
     private BoatPicker picker;
     private boolean pageReady;
     private int insetTop;
+    private boolean legacySession;
+    private final Runnable legacyTimeout = () -> disconnect("控制刷新超时，已尝试停桨");
 
     @Override public void onCreate(Bundle state) {
         super.onCreate(state);
@@ -38,7 +41,7 @@ public final class BoatActivity extends Activity {
             @Override public void connect(BluetoothDevice device) { BoatActivity.this.connect(device); }
         });
         web = new WebView(this);
-        web.setBackgroundColor(0xff233b56);
+        web.setBackgroundColor(0xfff5f2ee);
         web.setOnApplyWindowInsetsListener((v, insets) -> {
             int top = insets.getSystemWindowInsetTop();
             if (top != insetTop) {
@@ -48,6 +51,7 @@ public final class BoatActivity extends Activity {
             return v.onApplyWindowInsets(insets);
         });
         web.getSettings().setJavaScriptEnabled(true);
+        web.getSettings().setDomStorageEnabled(true);
         web.getSettings().setAllowContentAccess(false);
         web.getSettings().setAllowFileAccessFromFileURLs(false);
         web.getSettings().setAllowUniversalAccessFromFileURLs(false);
@@ -67,6 +71,9 @@ public final class BoatActivity extends Activity {
     }
 
     public final class Bridge {
+        @JavascriptInterface public void lightAppearance(boolean light) {
+            ui.post(() -> { lightSkin = light; updateSystemBars(); });
+        }
         @JavascriptInterface public void openDevices() {
             ui.post(() -> { if (foreground && link == null) picker.open(); });
         }
@@ -74,8 +81,13 @@ public final class BoatActivity extends Activity {
             ui.post(() -> { if (foreground && link == null) picker.search(); });
         }
         @JavascriptInterface public void closeDevices() { ui.post(picker::close); }
-        @JavascriptInterface public void connectTo(String address) {
-            ui.post(() -> { if (foreground && link == null) picker.select(address); });
+        @JavascriptInterface public void connectTo(String address, boolean legacy) {
+            ui.post(() -> {
+                if (foreground && link == null) {
+                    legacySession = legacy;
+                    picker.select(address);
+                }
+            });
         }
         @JavascriptInterface public void disconnectBoat() {
             ui.post(() -> { if (link != null) disconnect("已断开设备"); });
@@ -84,7 +96,16 @@ public final class BoatActivity extends Activity {
             ui.post(() -> displayMode(enabled));
         }
         @JavascriptInterface public void send(int token, String hex) { ui.post(() -> {
-            if (link == null || token != generation || !foreground || hex == null || hex.length() != 14) return;
+            if (link == null || token != generation || !foreground || hex == null) return;
+            if (legacySession) {
+                if (hex.length() != 2 || hex.charAt(0) != '3' || hex.charAt(1) < '1' || hex.charAt(1) > '5') return;
+                byte command = (byte)hex.charAt(1);
+                ui.removeCallbacks(legacyTimeout);
+                if (command != '5') ui.postDelayed(legacyTimeout, 350);
+                link.write(new byte[]{command});
+                return;
+            }
+            if (hex.length() != 14) return;
             byte[] frame = new byte[7];
             try {
                 for (int i=0; i<7; i++) frame[i]=(byte)Integer.parseInt(hex.substring(i*2,i*2+2),16);
@@ -104,10 +125,6 @@ public final class BoatActivity extends Activity {
         super.onActivityResult(code,result,data);
         if (code == BoatPicker.ENABLE) picker.enableReturned(result == RESULT_OK);
     }
-    private static String deviceName(BluetoothDevice d) {
-        String name = d.getName();
-        return name == null ? d.getAddress() : name;
-    }
     private void syncInsets() {
         if (!pageReady) return;
         int topDp = immersive ? 0 : Math.round(insetTop / getResources().getDisplayMetrics().density);
@@ -116,11 +133,20 @@ public final class BoatActivity extends Activity {
     private void displayMode(boolean enabled) {
         immersive = enabled;
         setRequestedOrientation(enabled ? ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE : ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED);
-        getWindow().getDecorView().setSystemUiVisibility(enabled ?
-                View.SYSTEM_UI_FLAG_FULLSCREEN | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION | View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY : View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN | View.SYSTEM_UI_FLAG_LAYOUT_STABLE);
+        updateSystemBars();
         syncInsets();
         web.requestApplyInsets();
         web.evaluateJavascript("window.boatFullscreen && boatFullscreen("+enabled+")", null);
+    }
+    private void updateSystemBars() {
+        int flags = immersive ? View.SYSTEM_UI_FLAG_FULLSCREEN | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION | View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY :
+            View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN | View.SYSTEM_UI_FLAG_LAYOUT_STABLE;
+        if (lightSkin) {
+            flags |= View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR;
+            if (Build.VERSION.SDK_INT >= 26) flags |= View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR;
+        }
+        getWindow().setNavigationBarColor(lightSkin && Build.VERSION.SDK_INT >= 26 ? 0xffedeae6 : 0xff0b1930);
+        getWindow().getDecorView().setSystemUiVisibility(flags);
     }
     @Override public void onWindowFocusChanged(boolean hasFocus) {
         super.onWindowFocusChanged(hasFocus);
@@ -135,11 +161,15 @@ public final class BoatActivity extends Activity {
     }
     private void connect(BluetoothDevice device) {
         if (!foreground) return;
+        String name=picker.currentName(device);
+        if (!BoatPicker.accepts(name,device.getType())) {
+            state("closed", "设备名称不匹配，请重新搜索 " + BoatPicker.TARGET_NAME);
+            return;
+        }
         generation++;
         int token=generation;
-        String name=deviceName(device);
         state("connecting","正在连接 "+name);
-        link=new BoatLink(new BoatLink.Listener() {
+        link=new BoatLink(legacySession, new BoatLink.Listener() {
             public void opened() { if (token==generation) state("open",name); }
             public void failed(String why) { if (token==generation) disconnect(why); }
             public void received(byte[] bytes) {
@@ -152,6 +182,7 @@ public final class BoatActivity extends Activity {
         link.start(device);
     }
     private void disconnect(String why) {
+        ui.removeCallbacks(legacyTimeout);
         generation++;
         if(link!=null) { link.close(); link=null; }
         state("closed",why);

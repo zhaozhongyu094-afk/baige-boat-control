@@ -9,6 +9,8 @@
     <meta name="theme-color" content="#091a35" />
     <title>百舸船控</title>
     <link rel="stylesheet" href="control.css" />
+    <link rel="stylesheet" href="settings.css" />
+    <link rel="stylesheet" href="silver.css" />
   </head>
   <body class="regular">
     <header>
@@ -20,12 +22,13 @@
         /><span class="divider"></span
         ><img class="race" src="race.png" alt="船赛标志" />
         <h1>百舸船控</h1>
+        <button id="settingsOpen" type="button" aria-label="设置" title="设置"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" d="m9.4 3 .5-1h4.2l.6 2.1 2 .9 1.9-.6 2.1 3.6-1.6 1.6.2 2.4 1.4 1.5-2.1 3.6-2.2-.5-1.8 1.2-.5 2.2H10l-.6-2.2-2-1-2.1.5-2.1-3.6 1.5-1.7v-2.1L3.2 8.3l2.1-3.6 2.1.6 1.8-.9z" transform="translate(0 1)"/><circle cx="12" cy="12" r="3.2" fill="none" stroke="currentColor" stroke-width="1.7"/></svg><span class="settingsCaption">设置</span></button>
       </div>
       <div class="toolbar">
         <span class="status"
           ><img id="modeIcon" src="icons/monitor.svg" alt="" /><span id="status"
             >离线模拟</span
-          ></span
+          ><span id="modeTag">模拟模式</span><span id="linkTag">蓝牙未连接</span><span id="controlNote"></span></span
         ><button id="connect" class="primary">
           <img src="icons/bluetooth.svg" alt="" /><span id="connectLabel"
             >连接设备</span
@@ -53,18 +56,19 @@
       </button>
     </header>
     <main>
+      <div id="instrumentHead"></div>
       <section class="gauges" aria-label="双桨 PWM 输出">
         <figure>
           <figcaption>左桨</figcaption>
           <canvas id="leftDial" aria-hidden="true"></canvas
           ><strong id="lv">0<small>%</small></strong
-          ><span>PWM 输出</span>
+          ><span id="leftDirection">停止</span>
         </figure>
         <figure>
           <figcaption>右桨</figcaption>
           <canvas id="rightDial" aria-hidden="true"></canvas
           ><strong id="rv">0<small>%</small></strong
-          ><span>PWM 输出</span>
+          ><span id="rightDirection">停止</span>
         </figure>
       </section>
       <section class="steering" aria-label="遥控摇杆">
@@ -74,13 +78,15 @@
           role="group"
           aria-label="拖动摇杆或按方向键，松手回中"
         >
-          <img id="stick" src="thumb.webp" alt="" draggable="false" />
+          <span class="axis forward">前进</span><span class="axis reverse">后退</span>
+          <span class="axis port">左转</span><span class="axis starboard">右转</span>
+          <i id="wake"></i><i id="stick" aria-hidden="true"></i>
         </div>
       </section>
       <aside class="actions">
         <p id="hint">松手回中</p>
         <button id="stop" class="primary">
-          <img src="icons/stop.svg" alt="" />停车
+          <i class="keyGrip" aria-hidden="true"></i><img src="icons/stop.svg" alt="" /><span id="stopLabel">立即停桨</span><i class="keyGrip" aria-hidden="true"></i>
         </button>
       </aside>
     </main>
@@ -93,7 +99,7 @@
       >
         <div class="sheetHead">
           <div>
-            <p>经典蓝牙 · JDY-31-SPP</p>
+            <p>经典蓝牙串口 · jdy-31-spp</p>
             <h2 id="pickerTitle">连接船模</h2>
           </div>
           <button id="closePicker" class="icon" aria-label="关闭设备列表">
@@ -109,9 +115,37 @@
             ></button
           ><button id="simulate" class="primary">继续模拟</button>
         </div>
+        <div class="dialogStopSlot"></div>
+      </section>
+    </div>
+    <div id="settingsShade" hidden>
+      <section id="settingsPanel" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
+        <div class="settingsHead"><h2 id="settingsTitle">设置</h2><img class="settingsSeal" src="association.svg" alt="电子科技协会"><button id="settingsClose" type="button" aria-label="关闭设置">×</button></div>
+        <div class="settingsBody">
+          <fieldset><legend>界面皮肤</legend>
+            <div class="swatches">
+              <label><input type="radio" name="skin" value="silver"><span class="sample silverSample" aria-hidden="true"></span>珍珠银</label>
+              <label><input type="radio" name="skin" value="navy"><span class="sample navySample" aria-hidden="true"></span>深蓝金属</label>
+            </div>
+          </fieldset>
+          <fieldset id="protocolChoices"><legend>控制协议</legend>
+            <label class="settingRow"><span><b>船端 PWM</b><small>适用于摇杆固件，双桨独立调速。</small></span><input type="radio" name="wire" value="pwm"></label>
+            <label class="settingRow"><span><b>旧版兼容模式</b><small>适用于原版 51 船程序，支持前后、左右和停桨。</small></span><input type="radio" name="wire" value="legacy"></label>
+            <div id="legacyOptions" hidden>
+              <p>旧固件会保持最后一次指令。蓝牙断开后，船端无法自行停桨。</p>
+              <label class="settingRow"><span><b>蓝牙点动调速 <em>实验</em></b><small>按摇杆幅度分四档交替发送行驶和停车。先卸桨台架试用。</small></span><input type="checkbox" id="pulse"></label>
+              <label class="settingRow" id="frequencyRow" hidden><span><b>点动频率</b><small>频率越高，单次停顿越短，对蓝牙时延也越敏感。</small></span><select id="pulseHz" aria-label="点动频率"><option value="4">4 Hz</option><option value="8" selected>8 Hz</option><option value="12">12 Hz</option></select></label>
+            </div>
+          </fieldset>
+          <p id="protocolLock" hidden>断开设备后可更改控制协议和点动调速。</p>
+          <p id="lastDisconnect" role="status" hidden></p>
+          <button type="button" id="resumeSim" hidden>进入离线模拟</button>
+        </div>
+        <div class="dialogStopSlot"></div>
       </section>
     </div>
     <script src="protocol.js"></script>
+    <script src="legacy.js"></script>
     <script src="dials.js"></script>
     <script src="control.js"></script>
   </body>

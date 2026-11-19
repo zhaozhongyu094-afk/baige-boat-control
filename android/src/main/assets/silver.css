@@ -1,0 +1,258 @@
+/* Shared controls keep the same hit targets and command path in both skins. */
+body:is(.regular,.full)[data-skin=silver] {
+  --ink: #172f4b;
+  --muted: #586575;
+  --accent: #245a91;
+  --panel: #f5f2ee;
+  --hairline: #d2d0cb;
+  --panel-shadow: 0 3px 9px #3936311a, 0 1px 2px #39363116;
+  --edge-gap: clamp(12px, 3vmin, 28px);
+  color-scheme: light;
+  color: var(--ink);
+  background: linear-gradient(150deg, #f6f4f0, #edeae6 62%, #f3f0eb);
+}
+
+/* Portrait exposes the three actions. Wide layouts keep a menu and a fullscreen button. */
+body:is(.regular,.full)[data-skin=silver] header {
+  position: absolute; z-index: 4;
+  inset: calc(var(--status-inset,0px) + var(--edge-gap)) max(var(--edge-gap),env(safe-area-inset-right)) auto auto;
+  display: flex; align-items: center; width: auto; height: auto; min-height: 0; max-width: none;
+  gap: 5px; margin: 0; padding: 0; border: 0; border-radius: 0;
+  background: transparent; box-shadow: none; color: var(--ink); text-shadow: none;
+  -webkit-backdrop-filter: none; backdrop-filter: none;
+}
+body:is(.regular,.full)[data-skin=silver] header::before,
+body:is(.regular,.full)[data-skin=silver] header::after,
+body:is(.regular,.full)[data-skin=silver] header .toolbar,
+body:is(.regular,.full)[data-skin=silver] #menuDisc,
+body:is(.regular,.full)[data-skin=silver] #exitLabel,
+body:is(.regular,.full)[data-skin=silver] #connectLabel { display: none; }
+body:is(.regular,.full)[data-skin=silver] header :is(#settingsOpen,#expand,#connect,#menuDisc) {
+  grid-area: auto; width: 44px; height: 44px; min-height: 44px;
+  padding: 11px; border: 1px solid #ffffff; border-radius: 50%;
+  color: var(--ink); background: linear-gradient(155deg,#fbfaf8,#e9e6e2);
+  box-shadow: 0 2px 4px #38352f26, inset 0 -1px 1px #bfbcb524;
+}
+body:is(.regular,.full)[data-skin=silver] header button img,
+body:is(.regular,.full)[data-skin=silver] #picker button:not(#stop) img {
+  filter: brightness(0) saturate(100%) invert(15%) sepia(28%) saturate(935%) hue-rotate(172deg);
+}
+body:is(.regular,.full)[data-skin=silver].land #menuDisc { display: grid; order: -1; }
+body:is(.regular,.full)[data-skin=silver] #menuDisc::before,
+body:is(.regular,.full)[data-skin=silver] #menuDisc::after,
+body:is(.regular,.full)[data-skin=silver] #glassTools::before,
+body:is(.regular,.full)[data-skin=silver] #glassTools::after,
+body:is(.regular,.full)[data-skin=silver] #glassTools .sep { display: none; }
+body:is(.regular,.full)[data-skin=silver] #menuDisc .dots i { background: var(--ink); }
+body:is(.regular,.full)[data-skin=silver].land #glassTools {
+  position: absolute; top: calc(100% + 8px); right: 0; z-index: 5; width: 160px;
+  display: grid; padding: 5px; gap: 2px; border: 1px solid var(--hairline); border-radius: 14px;
+  background: var(--panel); box-shadow: 0 4px 15px #172f4b18;
+  -webkit-backdrop-filter: none; backdrop-filter: none;
+  opacity: 0; visibility: hidden; pointer-events: none; transition: none; transform: none;
+}
+body:is(.regular,.full)[data-skin=silver].land #glassTools[aria-hidden="false"] {
+  opacity: 1; visibility: visible; pointer-events: auto;
+}
+body:is(.regular,.full)[data-skin=silver].land #glassTools :is(#connect,#settingsOpen) {
+  justify-content: flex-start; width: 100%; height: 44px; min-height: 44px; padding: 0 12px;
+  gap: 9px; border: 0; border-radius: 9px; background: transparent; color: var(--ink);
+  font-size: 14px; text-shadow: none; box-shadow: none;
+}
+body:is(.regular,.full)[data-skin=silver] #glassTools :is(#connectLabel,.settingsCaption) { display: inline; }
+
+/* The mode and the RFCOMM link are independent, including during handshake and loss. */
+body:is(.regular,.full)[data-skin=silver] main {
+  position: relative; isolation: isolate; display: grid; overflow: hidden;
+  margin: 0; min-height: 0; padding: var(--edge-gap); gap: 10px 0; background: transparent;
+  padding-left: max(var(--edge-gap),env(safe-area-inset-left));
+  padding-right: max(var(--edge-gap),env(safe-area-inset-right));
+  padding-bottom: max(var(--edge-gap),env(safe-area-inset-bottom));
+}
+body:is(.regular,.full)[data-skin=silver] #instrumentHead {
+  display: flex; flex-direction: column; gap: 5px; min-width: 0; z-index: 1;
+}
+body:is(.regular,.full)[data-skin=silver] .brand { display: flex; align-items: center; gap: clamp(4px,1.3vmin,8px); min-height: 44px; }
+body:is(.regular,.full)[data-skin=silver] .brand .divider { display: none; }
+body:is(.regular,.full)[data-skin=silver] .brand .association { width: clamp(28px,7.9vmin,46px); height: auto; flex: none; }
+body:is(.regular,.full)[data-skin=silver] .brand .race {
+  width: clamp(26px,7.15vmin,42px); height: auto; border-radius: 0; flex: none;
+}
+body:is(.regular,.full)[data-skin=silver] .brand h1 {
+  font-size: clamp(20px,4.9vmin,31px); font-weight: 750; font-style: normal; letter-spacing: .015em;
+}
+body:is(.regular,.full)[data-skin=silver] .status {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 4px 9px;
+  min-width: 0; color: var(--muted); font-size: clamp(11px,2.5vmin,14px); font-weight: 550; line-height: 1.25;
+}
+body:is(.regular,.full)[data-skin=silver] .status :is(#status,#modeIcon) { display: none; }
+body:is(.regular,.full)[data-skin=silver] .status span {
+  max-width: none; overflow: visible; text-overflow: clip; white-space: normal;
+}
+body:is(.regular,.full)[data-skin=silver] :is(#modeTag,#linkTag) { display: inline-flex; align-items: center; gap: 5px; }
+body:is(.regular,.full)[data-skin=silver] #modeTag {
+  padding: 4px 8px; border-radius: 6px; color: var(--ink); background: #e8e6e1;
+}
+body:is(.regular,.full)[data-skin=silver] :is(#modeTag,#linkTag)::before {
+  content: ""; width: 6px; height: 6px; box-sizing: border-box; flex: none; border-radius: 50%;
+  background: var(--accent);
+}
+body:is(.regular,.full)[data-skin=silver] #linkTag::before {
+  background: transparent; border: 1.3px solid #778699; transition: background-color .12s;
+}
+body:is(.regular,.full)[data-skin=silver] #linkTag[data-connection=open]::before { background: var(--accent); border-color: var(--accent); }
+body:is(.regular,.full)[data-skin=silver] #controlNote:not(:empty) { display: inline; color: #435d74; }
+
+/* Power readouts share a face. The needle remains visible at zero. */
+body:is(.regular,.full)[data-skin=silver] .gauges {
+  --readout: clamp(29px,7.9vmin,53px);
+  --direction: clamp(17px,3.9vmin,24px);
+  position: relative; isolation: isolate; display: flex; width: 100%; align-items: stretch;
+  gap: 0; padding: 0; border-radius: 18px; border: 1px solid #fffdfa;
+  background: linear-gradient(115deg,#fffcf6,#efebe5); box-shadow: var(--panel-shadow);
+}
+body:is(.regular,.full)[data-skin=silver] .gauges::before {
+  content: ""; position: absolute; pointer-events: none; z-index: 0;
+  inset: 0 0 calc(var(--readout) + var(--direction) + 8px);
+  border-radius: 17px 17px 10px 10px; border: 1px solid #d0cdc7;
+  background: linear-gradient(135deg,#e9e7e2,#f4f1eb 62%,#eeece7);
+  box-shadow: inset 0 3px 5px #46433b3d,inset 0 -1px 1px #fff,0 1px 0 #fffdfa;
+}
+body:is(.regular,.full)[data-skin=silver] .gauges figure {
+  display: grid; align-self: stretch; justify-items: center; align-items: center; align-content: center;
+  grid-template-rows: auto minmax(20px,1fr) var(--readout) var(--direction); gap: 0;
+  z-index: 1; min-height: 0; height: 100%; padding: 8px 3px 4px; aspect-ratio: auto; background: none; border: 0; filter: none;
+}
+body:is(.regular,.full)[data-skin=silver] .gauges figure + figure::before {
+  content: ""; position: absolute; top: 8px; bottom: 7px; left: 0; width: 1px; background: var(--hairline);
+}
+body:is(.regular,.full)[data-skin=silver] figure :is(figcaption,canvas,strong),
+body:is(.regular,.full)[data-skin=silver] figure > span {
+  position: static; width: auto; height: auto; clip-path: none; background: none; letter-spacing: 0; color: var(--ink);
+}
+body:is(.regular,.full)[data-skin=silver] figure figcaption { font-size: clamp(14px,3.35vmin,21px); font-weight: 650; }
+body:is(.regular,.full)[data-skin=silver] figure canvas { width: 100%; height: 100%; min-height: 0; }
+body:is(.regular,.full)[data-skin=silver] figure strong {
+  font: 750 clamp(24px,7.4vmin,50px)/1 Roboto,system-ui,sans-serif;
+  font-variant-numeric: tabular-nums; letter-spacing: -.04em;
+}
+body:is(.regular,.full)[data-skin=silver] figure strong small { color: inherit; font-size: .52em; margin-left: 2px; }
+body:is(.regular,.full)[data-skin=silver] figure > span {
+  padding: 2px 9px; border-radius: 999px; background: #e2dfd9; color: #515c65;
+  font: 550 clamp(10px,2.6vmin,14px)/1.32 system-ui,sans-serif;
+}
+
+/* The well has a single machined lip. Directional light and brushing are confined to the thumb. */
+body:is(.regular,.full)[data-skin=silver] #pad {
+  overflow: visible; border: 2px solid transparent;
+  background:
+    linear-gradient(90deg,transparent calc(50% - .55px),#a8b6c556 50%,transparent calc(50% + .55px)) padding-box,
+    linear-gradient(0deg,transparent calc(50% - .55px),#a8b6c556 50%,transparent calc(50% + .55px)) padding-box,
+    linear-gradient(145deg,#dedbd7f5,#efede9f7 61%,#e3e0dcf5) padding-box,
+    url(steel-blue-brush.webp) center / cover padding-box,
+    linear-gradient(140deg,#aba9a4,#888681 22%,#faf9f7 58%,#d1d0cc 80%,#fff) border-box;
+  box-shadow: inset 1px 4px 8px #46454040,inset -1px -2px 3px #fffffff2,0 1px 1px #fff;
+}
+body:is(.regular,.full)[data-skin=silver] #pad::before {
+  content: ""; position: absolute; inset: 16%; border-radius: 50%; pointer-events: none;
+  border: 1px dashed #8b9eb24c;
+}
+body:is(.regular,.full)[data-skin=silver] #stick {
+  z-index: 2; width: 31%; height: 31%; filter: none;
+  border: 1.5px solid transparent;
+  background: url(thumb-dish.webp) center / 100% 100% padding-box,
+    linear-gradient(140deg,#e7eef4,#537089 32%,#1d364a 70%,#90a4b3) border-box;
+  box-shadow: var(--cast-x,1.5px) var(--cast-y,4px) 6px #20262d48,0 1px 2px #0f263a60;
+}
+body:is(.regular,.full)[data-skin=silver] #pad.returning #stick {
+  transition: left 130ms cubic-bezier(.21,.72,.28,1),top 130ms cubic-bezier(.21,.72,.28,1),box-shadow 130ms ease-out;
+}
+body:is(.regular,.full)[data-skin=silver] #wake {
+  display: block; position: absolute; left: 50%; bottom: 50%; width: 9%; pointer-events: none;
+  transform-origin: 50% 100%; clip-path: polygon(8% 0,92% 0,50% 100%); background: linear-gradient(#3c63832c,#3c638303);
+}
+body:is(.regular,.full)[data-skin=silver] .axis {
+  position: absolute; display: flex; align-items: center; justify-content: center; gap: 4px;
+  color: var(--ink); font: 570 clamp(11px,2.8vmin,17px)/1 system-ui,sans-serif;
+  white-space: nowrap; pointer-events: none;
+}
+.axis::after { content: ""; display: block; width: 0; height: 0; border: 3px solid transparent; }
+.axis.forward, .axis.reverse { left: 50%; transform: translateX(-50%); }
+.axis.forward { bottom: calc(100% + 5px); flex-direction: column; }
+.axis.forward::after { border-top: 0; border-bottom: 4px solid #61788e; }
+.axis.reverse { top: calc(100% + 5px); flex-direction: column-reverse; }
+.axis.reverse::after { border-bottom: 0; border-top: 4px solid #61788e; }
+.axis.port, .axis.starboard { top: 50%; transform: translateY(-50%); }
+.axis.port { right: calc(100% + 5px); }
+.axis.port::after { border-left: 0; border-right: 4px solid #61788e; }
+.axis.starboard { left: calc(100% + 5px); flex-direction: row-reverse; }
+.axis.starboard::after { border-right: 0; border-left: 4px solid #61788e; }
+body:is(.regular,.full)[data-skin=silver] .actions { width: 100%; margin: 0; align-items: stretch; gap: 0; }
+body:is(.regular,.full)[data-skin=silver] .actions p { display: none; }
+body:is(.regular,.full)[data-skin=silver] :is(.actions,.dialogStopSlot) #stop {
+  height: 100%; min-height: 44px; width: 100%; max-width: none; padding: 6px 12px; gap: 9px;
+  isolation: isolate; border-radius: 13px; border: 1px solid #fffcf7;
+  background: linear-gradient(160deg,#95918a,#e8e4df 46%,#f9f5f0);
+  box-shadow: inset 0 1px 2px #4a403957,0 2px 4px #45332f26; color: #fff;
+  font-size: clamp(16px,4.1vmin,23px); font-weight: 650; transition: transform .1s ease-out;
+}
+body:is(.regular,.full)[data-skin=silver] #stop::before {
+  content: ""; position: absolute; z-index: -1; inset: 3px; border-radius: 10px;
+  background: linear-gradient(170deg,#c65a50,#b6473e 55%,#a63b34); border: 1px solid #93413a;
+  box-shadow: inset 0 1px 1px #ffd5c48c,inset 0 -2px 1px #842c26,0 1px 2px #483b3980;
+}
+body:is(.regular,.full)[data-skin=silver] #stop .keyGrip {
+  position: absolute; display: block; top: 29%; bottom: 29%; width: 15px; border-radius: 2px;
+  background: repeating-linear-gradient(90deg,#81352f88 0 1px,#e77b6c77 1px 2px,transparent 2px 5px);
+  pointer-events: none;
+}
+body:is(.regular,.full)[data-skin=silver] .keyGrip:first-child { left: 7%; }
+body:is(.regular,.full)[data-skin=silver] .keyGrip:last-child { right: 7%; }
+body:is(.regular,.full)[data-skin=silver] #stop:active::before { transform: translateY(1px); }
+body:is(.regular,.full)[data-skin=silver] #stop img { width: 1em; height: 1em; filter: brightness(0) invert(1); }
+
+body:is(.regular,.full)[data-skin=silver].portrait main {
+  grid-template-columns: 100%; grid-template-rows: auto clamp(134px,24dvh,219px) minmax(0,1fr) clamp(48px,6.5dvh,64px);
+}
+body:is(.regular,.full)[data-skin=silver].portrait .brand { padding-right: 142px; }
+body:is(.regular,.full)[data-skin=silver].portrait .gauges {
+  height: 100%; border: 1px solid #fffdfa; padding: 0; background: linear-gradient(115deg,#fffcf6,#efebe5);
+}
+body:is(.regular,.full)[data-skin=silver].land main {
+  grid-template-columns: minmax(0,35%) minmax(0,1fr);
+  grid-template-rows: auto minmax(0,1fr) clamp(48px,14dvh,74px);
+}
+body:is(.regular,.full)[data-skin=silver].land main::before {
+  content: ""; grid-area: 1 / 1 / 4 / 2; z-index: -1; align-self: stretch;
+  border-radius: 19px; border: 1px solid #fff; background: var(--panel); box-shadow: var(--panel-shadow);
+}
+body:is(.regular,.full)[data-skin=silver].land #instrumentHead { grid-area: 1/1; padding: 7px 12px 0; }
+body:is(.regular,.full)[data-skin=silver].land .gauges {
+  grid-area: 2/1; align-self: center; justify-self: center; width: calc(100% - 14px); height: min(100%,30vw,300px);
+  padding: 0; min-height: 0; background: linear-gradient(115deg,#fffcf6,#efebe5);
+}
+body:is(.regular,.full)[data-skin=silver].land .actions { grid-area: 3/1; padding: 0 10px 9px; }
+body:is(.regular,.full)[data-skin=silver].land .steering { grid-area: 1 / 2 / 4 / 3; }
+
+/* Quiet solid surfaces keep the device and settings dialogs in the same instrument family. */
+body:is(.regular,.full)[data-skin=silver] #shade[aria-hidden=true] { visibility: hidden; transition: none; }
+body:is(.regular,.full)[data-skin=silver] :is(#settingsPanel,#picker) {
+  --sheet-ink: var(--ink); --sheet-muted: var(--muted); --rule: var(--hairline);
+  color: var(--ink); background: var(--panel); border: 1px solid #fff;
+  box-shadow: 0 8px 28px #152b431c; -webkit-backdrop-filter: none; backdrop-filter: none;
+}
+body:is(.regular,.full)[data-skin=silver] #picker::before,
+body:is(.regular,.full)[data-skin=silver] #picker::after { display: none; }
+body:is(.regular,.full)[data-skin=silver] #picker :is(p,b,small,em,button) { color: var(--ink); }
+body:is(.regular,.full)[data-skin=silver] #picker .sheetFooter button { background: #e9eef3; border-color: var(--hairline); }
+body:is(.regular,.full)[data-skin=silver] #picker :is(.device,#devices) { border-color: var(--hairline); }
+body:is(.regular,.full)[data-skin=silver] .dialogStopSlot { flex: none; padding-top: 10px; }
+body:is(.regular,.full)[data-skin=silver] #settingsPanel .dialogStopSlot { padding: 10px 20px 14px; border-top: 1px solid var(--hairline); }
+body:is(.regular,.full)[data-skin=silver] .settingsSeal { display: block; margin: 0 auto 0 10px; width: 25px; height: 25px; }
+body:is(.regular,.full)[data-skin=silver] .silverSample {
+  background: radial-gradient(circle at 76% 50%,#3a5d7c 8%,#8297a8 9%,transparent 10%),linear-gradient(120deg,#f7f4ef,#dedbd5);
+}
+@media (prefers-reduced-motion: reduce) {
+  body:is(.regular,.full)[data-skin=silver] #pad.returning #stick,
+  body:is(.regular,.full)[data-skin=silver] #stop { transition: none; }
+}

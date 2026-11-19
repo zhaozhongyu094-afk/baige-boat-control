@@ -25,6 +25,7 @@ final class BoatLink {
     private final Handler ui=new Handler(Looper.getMainLooper());
     private final ExecutorService sender=Executors.newSingleThreadExecutor();
     private final Listener listener;
+    private final byte[] sessionStop;
     private BluetoothSocket socket;
     private OutputStream output;
     private boolean busy;
@@ -34,7 +35,10 @@ final class BoatLink {
     private final Runnable connectTimeout=()->fail("连接超时，请检查船模供电");
     private final Runnable writeTimeout=()->fail("蓝牙写入超时，已断开");
 
-    BoatLink(Listener listener) { this.listener=listener; }
+    BoatLink(boolean legacy, Listener listener) {
+        this.listener=listener;
+        sessionStop=legacy ? new byte[]{'5'} : STOP;
+    }
     void start(BluetoothDevice device) {
         try { socket=device.createRfcommSocketToServiceRecord(SPP); }
         catch (IOException | SecurityException e) { fail("无法打开蓝牙串口"); return; }
@@ -56,13 +60,17 @@ final class BoatLink {
                     ui.post(()->{if(!closed) listener.received(bytes);});
                 }
                 ui.post(()->fail("蓝牙已断开"));
-            } catch (IOException | SecurityException e) { ui.post(()->fail("蓝牙连接已中断，请检查 JDY-31")); }
+            } catch (IOException | SecurityException e) { ui.post(()->fail("蓝牙连接已中断")); }
         },"boat-rfcomm-reader");
         receiver.start();
     }
     void write(byte[] frame) {
         if (closed || output==null) return;
-        if (busy) { latest=frame; latestAt=SystemClock.elapsedRealtime(); return; }
+        if (busy) {
+            // A legacy OK has no sequence number. Never replace an unacknowledged digit.
+            if (frame.length==1 && latest!=null) { fail("旧船串口写入积压，已尝试停桨"); return; }
+            latest=frame; latestAt=SystemClock.elapsedRealtime(); return;
+        }
         busy=true;
         OutputStream sink=output;
         ui.postDelayed(writeTimeout,300);
@@ -74,7 +82,11 @@ final class BoatLink {
                     ui.removeCallbacks(writeTimeout);
                     busy=false;
                     byte[] next=latest; latest=null;
-                    if (next!=null && SystemClock.elapsedRealtime()-latestAt < 100) write(next);
+                    if (next!=null) {
+                        boolean stop = next.length==1 ? next[0]=='5' : next[3]==100 && next[4]==100;
+                        if (stop || SystemClock.elapsedRealtime()-latestAt < 100) write(next);
+                        else if (next.length==1) fail("旧船点动指令已过期，已尝试停桨");
+                    }
                 });
             } catch (IOException e) { ui.post(()->fail("蓝牙发送失败")); }
         });
@@ -87,7 +99,7 @@ final class BoatLink {
         BluetoothSocket peer=socket;
         OutputStream sink=output;
         // A zero frame follows any in-flight write. Socket close also unblocks stalled I/O.
-        if (sink!=null) sender.execute(()->{try { sink.write(STOP); } catch(IOException ignored) {}});
+        if (sink!=null) sender.execute(()->{try { sink.write(sessionStop); } catch(IOException ignored) {}});
         sender.shutdown();
         if(peer!=null) ui.postDelayed(()->{try {peer.close();} catch(IOException ignored) {}},sink==null?0:35);
     }

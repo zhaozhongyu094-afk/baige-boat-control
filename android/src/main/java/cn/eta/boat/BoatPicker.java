@@ -48,8 +48,13 @@ final class BoatPicker {
         this.listener = listener;
     }
 
-    static boolean accepts(String name,int type) {
-        return type != BluetoothDevice.DEVICE_TYPE_LE && "JDY-31-SPP".equalsIgnoreCase(name);
+    static final String TARGET_NAME = "jdy-31-spp";
+    static boolean accepts(String name, int type) {
+        return type != BluetoothDevice.DEVICE_TYPE_LE && TARGET_NAME.equalsIgnoreCase(name);
+    }
+    String currentName(BluetoothDevice device) {
+        String name = device.getName();
+        return name != null ? name : nearby.get(device.getAddress());
     }
 
     void open() {
@@ -111,10 +116,15 @@ final class BoatPicker {
     }
 
     private JSONArray rows() {
-        Map<String,String> names = new TreeMap<>(nearby);
+        Map<String,String> names = new TreeMap<>();
         Set<String> bonded = new HashSet<>();
+        for (String address : nearby.keySet()) {
+            BluetoothDevice device=radio.getRemoteDevice(address);
+            String name=currentName(device);
+            if (accepts(name,device.getType())) names.put(address,name);
+        }
         for (BluetoothDevice device : radio.getBondedDevices()) {
-            String address=device.getAddress(), name=device.getName();
+            String address=device.getAddress(), name=currentName(device);
             if (accepts(name,device.getType())) { names.put(address,name); bonded.add(address); }
             else names.remove(address);
         }
@@ -148,7 +158,7 @@ final class BoatPicker {
         scanning=true; ownScan=!existing; waitingForStart=!existing;
         seen.clear(); nearby.clear();
         ui.postDelayed(scanTimeout, 25000);
-        say("正在搜索附近的 JDY-31-SPP…");
+        say("正在搜索 " + TARGET_NAME + "…");
     }
 
     private void stopScan(boolean connecting) {
@@ -164,16 +174,15 @@ final class BoatPicker {
         boolean empty;
         try { empty=canConnect() && rows().length()==0; }
         catch (SecurityException e) { say("蓝牙权限已变化，请重新打开连接面板。"); return; }
-        say(empty ? (Build.VERSION.SDK_INT<31 ? "未找到模块，请确认船模可被发现并开启手机定位后手动重试。" :
-            "未找到 JDY-31-SPP，请确认模块已上电且可被发现，再手动搜索。") : "搜索完成");
+        say(empty ? "未找到 " + TARGET_NAME + (Build.VERSION.SDK_INT<31 ? "，请确认模块可被发现并开启手机定位后重试。" :
+            "，请确认模块名称和供电后手动搜索。") : "搜索完成");
     }
 
     void select(String address) {
         if (!visible || !resumed || pairing!=null || radio==null || !canConnect() || address==null || !BluetoothAdapter.checkBluetoothAddress(address)) return;
         try {
             BluetoothDevice device=radio.getRemoteDevice(address);
-            String name=device.getName();
-            if (name==null) name=nearby.get(address);
+            String name=currentName(device);
             boolean bonded=device.getBondState()==BluetoothDevice.BOND_BONDED;
             if (!radio.isEnabled() || !accepts(name,device.getType()) || (!bonded && !nearby.containsKey(address))) {
                 say("这台设备当前不可用，请手动搜索。"); return;
@@ -192,8 +201,7 @@ final class BoatPicker {
     private void checkPair() {
         if (visible && resumed && pairing!=null && pairing.getBondState()==BluetoothDevice.BOND_BONDED) {
             BluetoothDevice device=pairing;
-            String name=device.getName();
-            if (!accepts(name!=null?name:nearby.get(device.getAddress()), device.getType())) {
+            if (!accepts(currentName(device),device.getType())) {
                 pairFailed("设备名称已改变，请手动搜索。"); return;
             }
             close(); listener.connect(device);
@@ -217,7 +225,8 @@ final class BoatPicker {
             else if (visible && state==BluetoothAdapter.STATE_ON) { say(""); advance(); }
             return;
         }
-        if (!visible || !canConnect()) return;
+        boolean rename = BluetoothDevice.ACTION_NAME_CHANGED.equals(event);
+        if ((!visible && !rename) || !canConnect()) return;
         if (BluetoothAdapter.ACTION_DISCOVERY_STARTED.equals(event)) {
             waitingForStart=false; return;
         }
@@ -239,7 +248,7 @@ final class BoatPicker {
             return;
         }
         if (BluetoothDevice.ACTION_FOUND.equals(event) && scanning) { waitingForStart=false; seen.add(address); }
-        else if (!BluetoothDevice.ACTION_NAME_CHANGED.equals(event) || !seen.contains(address)) return;
+        else if (!rename || (!seen.contains(address) && !nearby.containsKey(address))) return;
         String name=intent.getStringExtra(BluetoothDevice.EXTRA_NAME);
         if (name==null) name=device.getName();
         if (accepts(name,device.getType())) {

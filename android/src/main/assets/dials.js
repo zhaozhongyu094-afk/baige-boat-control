@@ -27,13 +27,16 @@ function paintDial(index, value) {
   const c = canvas.getContext("2d");
   c.clearRect(0, 0, width, height);
   c.save();
-  const scale = Math.min(width / 312, height / 205);
-  c.translate((width - 312 * scale) / 2, (height - 205 * scale) / 2);
+  const silver = document.body.dataset.skin === "silver";
+  const viewWidth = silver ? 270 : 312, viewHeight = silver ? 160 : 205;
+  const scale = Math.min(width / viewWidth, height / viewHeight);
+  c.translate((width - viewWidth * scale) / 2 - (silver ? 21 * scale : 0),
+    (height - viewHeight * scale) / 2);
   c.scale(scale, scale);
   const cx = 156,
-    cy = 144,
-    r = 115,
-    end = (p) => ((162 + (p + 100) * 1.08) * Math.PI) / 180;
+    cy = silver ? 134 : 144,
+    r = silver ? 102 : 115,
+    end = (p) => ((270 + p * (silver ? .9 : 1.08)) * Math.PI) / 180;
   const pt = (a, d) => [cx + Math.cos(a) * d, cy + Math.sin(a) * d];
   const strokeArc = (radius, a, b, color, weight) => {
     c.beginPath();
@@ -51,49 +54,50 @@ function paintDial(index, value) {
   chrome.addColorStop(0.55, "#839fbf");
   chrome.addColorStop(0.78, "#dce9f7");
   chrome.addColorStop(1, "#637e9f");
-  strokeArc(r, lo, hi, chrome, 2.3);
+  strokeArc(r, lo, hi, silver ? "#c6d0da" : chrome, silver ? 1.4 : 2.3);
   throttleBands.forEach(({ track, lit }, i) => {
     const inner = i * 25 + (i === 0 ? 0 : 0.95);
     const outer = (i + 1) * 25 - (i === throttleBands.length - 1 ? 0 : 0.95);
     for (const sign of [-1, 1]) {
       const a = end(sign * inner),
         b = end(sign * outer);
-      strokeArc(r - 7, Math.min(a, b), Math.max(a, b), track, 11);
+      if (!silver) strokeArc(r - 7, Math.min(a, b), Math.max(a, b), track, 11);
       const filled = Math.min(outer, sign * value);
       if (filled > inner) {
         const tip = end(sign * filled);
-        strokeArc(r - 7, Math.min(a, tip), Math.max(a, tip), lit, 11);
+        strokeArc(silver ? r + 1 : r - 7, Math.min(a, tip), Math.max(a, tip), silver ? "#285779" : lit, silver ? 3.5 : 11);
       }
     }
   });
-  for (let p = -100; p <= 100; p += 2.5) {
+  for (let p = -100; p <= 100; p += silver ? 5 : 2.5) {
     const major = p % 25 === 0,
       medium = p % 5 === 0,
       a = end(p);
     c.beginPath();
     c.moveTo(...pt(a, r - 0.4));
-    c.lineTo(...pt(a, r - (major ? 16 : medium ? 8 : 4)));
-    c.strokeStyle = major ? "#f3f7ff" : medium ? "#bccee3" : "#647e9e";
-    c.lineWidth = major ? 2.6 : medium ? 1.25 : 0.75;
+    c.lineTo(...pt(a, r - (major ? (silver ? 12 : 16) : medium ? 8 : 4)));
+    c.strokeStyle = silver ? (major ? "#687e94" : "#a3b3c2") : major ? "#f3f7ff" : medium ? "#bccee3" : "#647e9e";
+    c.lineWidth = major ? (silver ? 2 : 2.6) : medium ? 1.25 : 0.75;
     c.stroke();
-    if (major) {
-      const [x, y] = pt(a, r + 14);
+    if (major && (!silver || p % 100 === 0)) {
+      const [x, y] = pt(a, silver && p !== 0 ? r : r + 14);
       c.textAlign = "center";
       c.textBaseline = "middle";
-      c.fillStyle = p === 0 ? "#fff" : "#d8e6f8";
-      c.font = "600 13.5px Roboto,Arial,sans-serif";
+      c.fillStyle = silver ? "#486784" : p === 0 ? "#fff" : "#d8e6f8";
+      const fontSize = silver ? Math.max(15, Math.min(23, 9.5 * ratio / scale)) : 13.5;
+      c.font = "550 " + fontSize + "px Roboto,Arial,sans-serif";
       c.fillText(
         p > 0 ? "+" + p : String(p),
         x,
-        Math.abs(p) === 100 ? y + 8 : y,
+        Math.abs(p) === 100 ? y + (silver ? 14 : 8) : y,
       );
     }
   }
   const [tx, ty] = pt(current, r - 12),
     [bx, by] = pt(current, -15),
-    dx = -Math.sin(current) * 5.4,
-    dy = Math.cos(current) * 5.4;
-  c.shadowColor = "#000b";
+    dx = -Math.sin(current) * (silver ? 3.1 : 5.4),
+    dy = Math.cos(current) * (silver ? 3.1 : 5.4);
+  c.shadowColor = silver ? "#29437055" : "#000b";
   c.shadowBlur = 3;
   c.shadowOffsetY = 2;
   c.beginPath();
@@ -102,7 +106,7 @@ function paintDial(index, value) {
   c.lineTo(tx, ty);
   c.lineTo(cx - dx, cy - dy);
   c.closePath();
-  c.fillStyle = "#a8c1da";
+  c.fillStyle = silver ? "#172f4b" : "#a8c1da";
   c.fill();
   c.shadowBlur = 0;
   c.shadowOffsetY = 0;
@@ -111,9 +115,14 @@ function paintDial(index, value) {
   c.lineTo(cx + dx, cy + dy);
   c.lineTo(tx, ty);
   c.closePath();
-  c.fillStyle = "#f6fbff";
+  c.fillStyle = silver ? "#477197" : "#f6fbff";
   c.fill();
-  if (dialHub.complete && dialHub.naturalWidth)
+  if (silver) {
+    const hub = c.createLinearGradient(cx-6,cy-6,cx+6,cy+6);
+    hub.addColorStop(0,"#9eabb8"); hub.addColorStop(.38,"#f4f6f8"); hub.addColorStop(1,"#8996a4");
+    c.beginPath(); c.arc(cx,cy,7,0,Math.PI*2); c.fillStyle=hub; c.fill();
+    c.strokeStyle="#8c9ba9"; c.lineWidth=1; c.stroke();
+  } else if (dialHub.complete && dialHub.naturalWidth)
     c.drawImage(dialHub, cx - 12.5, cy - 12.5, 25, 25);
   c.restore();
 }
