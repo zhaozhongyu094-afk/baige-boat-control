@@ -2,6 +2,13 @@
 const dialHub = new Image();
 dialHub.src = "pivot.webp";
 const dialValues = [0, 0];
+// Each quarter of the signed PWM scale has its own engraved segment.
+const throttleBands = [
+  { track: "#314a63", lit: "#578ac1" },
+  { track: "#354f67", lit: "#72a9dc" },
+  { track: "#39546d", lit: "#9ccbef" },
+  { track: "#405b73", lit: "#d0e8f7" },
+];
 const dials = ["leftDial", "rightDial"].map((id) =>
   document.getElementById(id),
 );
@@ -37,7 +44,6 @@ function paintDial(index, value) {
   };
   const lo = end(-100),
     hi = end(100),
-    zero = end(0),
     current = end(value);
   const chrome = c.createLinearGradient(42, 22, 249, 181);
   chrome.addColorStop(0, "#7893b1");
@@ -46,20 +52,20 @@ function paintDial(index, value) {
   chrome.addColorStop(0.78, "#dce9f7");
   chrome.addColorStop(1, "#637e9f");
   strokeArc(r, lo, hi, chrome, 2.3);
-  strokeArc(r - 7, lo, hi, "#345473", 11);
-  if (value) {
-    const active = c.createLinearGradient(47, 46, 266, 138);
-    active.addColorStop(0, "#3d78c3");
-    active.addColorStop(0.55, "#3387e8");
-    active.addColorStop(1, "#79b8ff");
-    strokeArc(
-      r - 7,
-      Math.min(current, zero),
-      Math.max(current, zero),
-      active,
-      11,
-    );
-  }
+  throttleBands.forEach(({ track, lit }, i) => {
+    const inner = i * 25 + (i === 0 ? 0 : 0.95);
+    const outer = (i + 1) * 25 - (i === throttleBands.length - 1 ? 0 : 0.95);
+    for (const sign of [-1, 1]) {
+      const a = end(sign * inner),
+        b = end(sign * outer);
+      strokeArc(r - 7, Math.min(a, b), Math.max(a, b), track, 11);
+      const filled = Math.min(outer, sign * value);
+      if (filled > inner) {
+        const tip = end(sign * filled);
+        strokeArc(r - 7, Math.min(a, tip), Math.max(a, tip), lit, 11);
+      }
+    }
+  });
   for (let p = -100; p <= 100; p += 2.5) {
     const major = p % 25 === 0,
       medium = p % 5 === 0,

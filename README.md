@@ -1,14 +1,14 @@
-# 百舸船控 v1.3
+# 百舸船控 v1.4
 
 电子科技协会 2026 船模设计大赛的安卓遥控器与 51 单片机固件。手机通过 JDY-31 经典蓝牙串口控制双桨，STC89C52RC 通过软件 PWM 驱动 L298，实现前后调速、差速转弯和原地转向。
 
-**[安卓安装包](dist/Baige-Boat-Control-v1.3.apk)** · **[船控固件](dist/BoatPWM.hex)** · [校验值](dist/SHA256SUMS)
+**[安卓安装包](https://github.com/zhaozhongyu094-afk/baige-boat-control/releases/download/v1.4/Baige-Boat-Control-v1.4.apk)** · **[船控固件](dist/BoatPWM.hex)** · [校验值](dist/SHA256SUMS)
 
 ![百舸船控全屏模拟界面，左侧为双桨 PWM 仪表和停车键，右侧为摇杆](docs/screens/fullscreen.png)
 
 ## 先体验遥控
 
-安装 APK 后默认进入离线模拟，可以直接推杆、观察左右桨的 PWM 指令，松手后摇杆回中。点右上角进入横屏全屏，再轻触右上角圆钮即可展开「连接设备」和「退出全屏」。竖屏、横屏和全屏工具栏采用液态玻璃样式。[竖屏界面](docs/screens/portrait.png) · [横屏界面](docs/screens/landscape.png) · [全屏工具栏](docs/screens/fullscreen-menu.png)
+安装 APK 后默认进入离线模拟，可以直接推杆、观察左右桨的 PWM 指令，松手后摇杆回中。点右上角进入横屏全屏，再轻触右上角圆钮即可展开「连接设备」和「退出全屏」。横竖屏工具栏采用液态玻璃样式，连接面板打开时背景渐渐模糊。双桨 PWM 仪表从中位向两端按 25% 分段，推力越高，冰蓝色弧段越亮。[竖屏界面](docs/screens/portrait.png) · [横屏界面](docs/screens/landscape.png) · [全屏工具栏](docs/screens/fullscreen-menu.png)
 
 在电脑上体验时，下载仓库后用浏览器打开 `android/src/main/assets/index.html`，鼠标拖动摇杆即可模拟。
 

@@ -1,6 +1,9 @@
 "use strict";
 const el = (id) => document.getElementById(id);
 const native = window.BoatRadio;
+const shade = el("shade");
+const mainPanel = document.querySelector("main");
+const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
 let stateName = "closed";
 let session = 0,
   link = false,
@@ -105,7 +108,7 @@ window.boatRx = (token, hex) => {
 const pad = el("pad");
 function permitted() {
   return (
-    el("shade").hidden &&
+    !pickerIsOpen() &&
     (stateName === "closed" ||
       (link && ready && performance.now() - lastAck <= 350))
   );
@@ -173,14 +176,23 @@ document.addEventListener("visibilitychange", () => {
 });
 el("stop").onclick = stop;
 
+function pickerIsOpen() {
+  return shade.getAttribute("aria-hidden") === "false";
+}
+function setPickerOpen(open) {
+  mainPanel.toggleAttribute("inert", open);
+  header.toggleAttribute("inert", open);
+  shade.toggleAttribute("inert", !open);
+  shade.setAttribute("aria-hidden", String(!open));
+  document.body.classList.toggle("picking", open);
+}
 function closePicker(focus = true) {
-  const wasOpen = !el("shade").hidden;
-  el("shade").hidden = true;
-  if (wasOpen && focus)
-    (fullscreenActive ? el("menuDisc") : el("connect")).focus();
+  if (!pickerIsOpen()) return;
+  setPickerOpen(false);
+  if (focus) (fullscreenActive ? el("menuDisc") : el("connect")).focus();
 }
 window.boatDevices = (items, message) => {
-  if (el("shade").hidden) return;
+  if (!pickerIsOpen()) return;
   const list = el("devices");
   list.replaceChildren();
   if (!items.length) {
@@ -231,7 +243,7 @@ el("connect").onclick = () => {
     native.disconnectBoat();
     return;
   }
-  el("shade").hidden = false;
+  setPickerOpen(true);
   el("settings").hidden = !native;
   el("again").hidden = !native;
   el("closePicker").focus();
@@ -254,11 +266,47 @@ const connectButton = el("connect");
 const expandButton = el("expand");
 const orientation = window.matchMedia("(orientation: landscape)");
 let fullscreenActive = false;
+let modeChangedAt = -Infinity;
+
+// Replay the reveal once in the final orientation if Android rotates after the mode callback.
+function revealLayout() {
+  if (reducedMotion.matches || !mainPanel.animate) return;
+  const entering = fullscreenActive ? 1 : -1;
+  const reveal = (element, from, duration) => {
+    for (const old of element.getAnimations()) {
+      if (old.id === "mode-reveal") old.cancel();
+    }
+    element.animate(
+      [
+        { opacity: 0.58, transform: from },
+        { opacity: 1, transform: "none" },
+      ],
+      { id: "mode-reveal", duration, easing: "cubic-bezier(.2,.78,.24,1)" },
+    );
+  };
+  reveal(
+    mainPanel.querySelector(".gauges"),
+    "translateX(" + -9 * entering + "px)",
+    250,
+  );
+  reveal(
+    mainPanel.querySelector(".steering"),
+    "scale(" + (entering > 0 ? ".94" : "1.035") + ")",
+    300,
+  );
+  reveal(header, "translateY(-5px)", 220);
+}
 
 function refreshOrientation() {
+  const rotated =
+    document.body.classList.contains("land") !== orientation.matches;
   document.body.classList.toggle("land", orientation.matches);
   document.body.classList.toggle("portrait", !orientation.matches);
   fitWheel();
+  if (rotated && performance.now() - modeChangedAt < 1000) {
+    modeChangedAt = -Infinity;
+    revealLayout();
+  }
 }
 function setToolsOpen(open) {
   const visible = fullscreenActive && open;
@@ -284,7 +332,7 @@ document.addEventListener("pointerdown", (event) => {
   if (toolsAreOpen() && !header.contains(event.target)) setToolsOpen(false);
 });
 window.boatBack = () => {
-  if (!el("shade").hidden) {
+  if (pickerIsOpen()) {
     closePicker();
     return true;
   }
@@ -300,7 +348,8 @@ document.addEventListener("keydown", (e) => {
 });
 window.boatFullscreen = (enabled) => {
   enabled = Boolean(enabled);
-  if (fullscreenActive !== enabled) {
+  const changed = fullscreenActive !== enabled;
+  if (changed) {
     stop();
     fullscreenActive = enabled;
     document.body.classList.toggle("regular", !enabled);
@@ -321,6 +370,10 @@ window.boatFullscreen = (enabled) => {
     ? "icons/corners-in.svg"
     : "icons/corners-out.svg";
   refreshOrientation();
+  if (changed) {
+    modeChangedAt = performance.now();
+    revealLayout();
+  }
 };
 function fitWheel() {
   const area = el("pad").parentElement;

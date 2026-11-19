@@ -22,6 +22,11 @@ body {
   background: #091a34;
 }
 button {
+  appearance: none;
+  -webkit-appearance: none;
+  -webkit-tap-highlight-color: transparent;
+  position: relative;
+  overflow: hidden;
   display: inline-flex;
   justify-content: center;
   align-items: center;
@@ -39,13 +44,30 @@ button {
   min-height: 42px;
   touch-action: manipulation;
 }
-button:active {
-  filter: brightness(1.25);
+button:not(#menuDisc)::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background: rgba(215, 239, 255, 0.17);
+  opacity: 0;
+  transition: opacity 120ms ease-out;
+}
+button:not(#menuDisc):active::after {
+  opacity: 1;
+  transition-duration: 35ms;
+}
+button * {
+  -webkit-tap-highlight-color: transparent;
+}
+#menuDisc:active::before {
+  filter: brightness(1.12);
 }
 button:focus-visible,
 #pad:focus-visible {
   outline: 3px solid #99c4ff;
-  outline-offset: 2px;
+  outline-offset: -3px;
 }
 button img,
 .status img {
@@ -134,9 +156,11 @@ h1 {
   background: transparent;
   border-color: transparent;
 }
-.icon:hover,
-#expand:hover {
-  background: #20385a;
+@media (hover: hover) {
+  .icon:hover,
+  #expand:hover {
+    background: #20385a;
+  }
 }
 main {
   flex: 1;
@@ -291,8 +315,32 @@ body.full main {
     max(12px, env(safe-area-inset-right)) max(10px, env(safe-area-inset-bottom))
     12px;
   background: rgb(6 18 35 / 32%);
+  visibility: hidden;
+  pointer-events: none;
+  opacity: 0;
+  -webkit-backdrop-filter: blur(0px);
+  backdrop-filter: blur(0px);
+  transition:
+    opacity 170ms ease-out,
+    backdrop-filter 200ms ease-out,
+    visibility 0s linear 220ms;
+}
+#shade[aria-hidden="false"] {
+  visibility: visible;
+  pointer-events: auto;
+  opacity: 1;
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+  transition-delay: 0s;
 }
 #picker {
+  --sheet-offset: 22px, 0;
+  transform: translate(var(--sheet-offset)) scale(0.98);
+  transform-origin: right center;
+  opacity: 0;
+  transition:
+    transform 220ms cubic-bezier(0.22, 0.72, 0.2, 1),
+    opacity 160ms ease-out;
   position: relative;
   isolation: isolate;
   display: flex;
@@ -311,6 +359,18 @@ body.full main {
     0 12px 38px #07182944;
   -webkit-backdrop-filter: blur(8px) saturate(1.3);
   backdrop-filter: blur(8px) saturate(1.3);
+}
+#shade[aria-hidden="false"] #picker {
+  opacity: 1;
+  transform: translate(0, 0) scale(1);
+}
+@supports not (
+  (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))
+) {
+  body.picking > main,
+  body.picking > header {
+    filter: blur(8px);
+  }
 }
 
 .sheetHead,
@@ -687,8 +747,10 @@ body.full #glassTools button {
   width: 1px;
   background: #d3e6ff4d;
 }
-#glassTools button:hover {
-  background: #accded20;
+@media (hover: hover) {
+  #glassTools button:hover {
+    background: #accded20;
+  }
 }
 #menuDisc {
   position: relative;
@@ -1110,8 +1172,9 @@ body.full #glassTools[aria-hidden="false"] {
   min-height: 62px;
   border-bottom-color: #c7dcf230;
 }
-.device:active {
-  background: #e7f4ff17;
+.device {
+  border-radius: 10px;
+  padding-inline: 7px;
 }
 .device img {
   width: 32px;
@@ -1156,9 +1219,14 @@ body.full #glassTools[aria-hidden="false"] {
   #picker {
     width: 100%;
     height: min(58dvh, 440px);
+    --sheet-offset: 0, 22px;
+    transform-origin: bottom center;
   }
 }
 @media (prefers-reduced-motion: reduce) {
+  #shade,
+  #picker,
+  button:not(#menuDisc)::after,
   body.full #glassTools,
   body.full #glassTools[aria-hidden="false"],
   #menuDisc::before,
