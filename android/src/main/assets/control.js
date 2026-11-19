@@ -3,7 +3,6 @@ const el = (id) => document.getElementById(id);
 const native = window.BoatRadio;
 const shade = el("shade");
 const mainPanel = document.querySelector("main");
-const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
 function preference(key, fallback) {
   try { return localStorage.getItem("boat." + key) || fallback; } catch { return fallback; }
 }
@@ -50,8 +49,8 @@ function label(s, live = false, note = "") {
   el("connect").setAttribute("aria-label", stateName === "closed" ? "连接设备" : "断开设备");
   el("connect").title = s;
 }
-// Leave enough room for the full thumb at the edge of the silver well.
-function travelFraction() { return skin === "silver" ? .34 : .39; }
+// Both skins have the same 31%-diameter thumb and usable travel.
+const thumbTravel = .34;
 function draw(rawX, rawY) {
   x = rawX;
   y = rawY;
@@ -61,18 +60,15 @@ function draw(rawX, rawY) {
     el("stopLabel").textContent = "立即停桨";
   }
   const stick = el("stick");
-  const travel = travelFraction();
-  stick.style.left = 50 + x * travel + "%";
-  stick.style.top = 50 - y * travel + "%";
-  if (skin === "silver") {
-    stick.style.setProperty("--cast-x", (1.5 + x * .022) + "px");
-    stick.style.setProperty("--cast-y", (4 + y * .025) + "px");
-  }
+  stick.style.left = 50 + x * thumbTravel + "%";
+  stick.style.top = 50 - y * thumbTravel + "%";
+  stick.style.setProperty("--cast-x", (1.5 + x * .022) + "px");
+  stick.style.setProperty("--cast-y", (4 + y * .025) + "px");
   const motors = wire === "legacy" ? BoatLegacy.demand(x, y, pulsed).outputs :
     BoatWire.motors(x, y).map(v => Math.sign(v) * Math.round(Math.abs(v) * 100 / 32));
   const length = Math.hypot(x, y);
   const wake = el("wake");
-  wake.style.height = (length * travel) + "%";
+  wake.style.height = (length * thumbTravel) + "%";
   wake.style.transform = "translateX(-50%) rotate(" + Math.atan2(x, y) + "rad)";
   ["l", "r"].forEach((id, i) => {
     const n = motors[i];
@@ -199,9 +195,8 @@ function permitted() {
 }
 function move(e) {
   const r = pad.getBoundingClientRect();
-  const travel = travelFraction();
-  let a = (e.clientX - r.left - r.width / 2) / (r.width * travel),
-    b = (r.top + r.height / 2 - e.clientY) / (r.height * travel);
+  let a = (e.clientX - r.left - r.width / 2) / (r.width * thumbTravel),
+    b = (r.top + r.height / 2 - e.clientY) / (r.height * thumbTravel);
   const length = Math.hypot(a, b);
   if (length < 0.08) {
     draw(0, 0);
@@ -360,7 +355,6 @@ function resumeSimulation() {
 }
 el("simulate").onclick = () => { resumeSimulation(); closePicker(); };
 const header = document.querySelector("header");
-const toolbar = header.querySelector(".toolbar");
 const toolsPanel = el("glassTools");
 const menuButton = el("menuDisc");
 const connectButton = el("connect");
@@ -370,51 +364,17 @@ const brand = header.querySelector(".brand");
 const statusChip = el("status").parentElement;
 const settingsButton = el("settingsOpen");
 let fullscreenActive = false;
-let modeChangedAt = -Infinity;
-
-// Replay the reveal once in the final orientation if Android rotates after the mode callback.
-function revealLayout() {
-  if (skin === "silver" || reducedMotion.matches || !mainPanel.animate) return;
-  const entering = fullscreenActive ? 1 : -1;
-  const reveal = (element, from, duration) => {
-    for (const old of element.getAnimations()) {
-      if (old.id === "mode-reveal") old.cancel();
-    }
-    element.animate(
-      [
-        { opacity: 0.58, transform: from },
-        { opacity: 1, transform: "none" },
-      ],
-      { id: "mode-reveal", duration, easing: "cubic-bezier(.2,.78,.24,1)" },
-    );
-  };
-  reveal(
-    mainPanel.querySelector(".gauges"),
-    "translateX(" + -9 * entering + "px)",
-    250,
-  );
-  reveal(
-    mainPanel.querySelector(".steering"),
-    "scale(" + (entering > 0 ? ".94" : "1.035") + ")",
-    300,
-  );
-  reveal(header, "translateY(-5px)", 220);
-}
 
 function refreshOrientation() {
   const rotated =
     document.body.classList.contains("land") !== orientation.matches;
   document.body.classList.toggle("land", orientation.matches);
   document.body.classList.toggle("portrait", !orientation.matches);
-  if (rotated && skin === "silver") arrangeTools();
+  if (rotated) arrangeTools();
   fitWheel();
-  if (rotated && performance.now() - modeChangedAt < 1000) {
-    modeChangedAt = -Infinity;
-    revealLayout();
-  }
 }
 function compactTools() {
-  return skin === "silver" ? orientation.matches : fullscreenActive;
+  return orientation.matches;
 }
 function setToolsOpen(open) {
   const collapsed = compactTools();
@@ -473,18 +433,13 @@ window.boatFullscreen = (enabled) => {
     ? "icons/corners-in.svg"
     : "icons/corners-out.svg";
   refreshOrientation();
-  if (changed) {
-    modeChangedAt = performance.now();
-    revealLayout();
-  }
 };
 function fitWheel() {
   const area = el("pad").parentElement;
   const portrait = window.matchMedia("(orientation: portrait)").matches;
   const width = Math.max(
     0,
-    skin === "silver" ? Math.min(area.clientWidth - (portrait ? 82 : 98), area.clientHeight - 54)
-      : Math.min(area.clientWidth * (portrait ? 0.85 : 1), area.clientHeight),
+    Math.min(area.clientWidth - (portrait ? 82 : 98), area.clientHeight - 54),
   );
   el("pad").style.width = width + "px";
 }
@@ -514,27 +469,14 @@ window.boatSuspend = () => {
 };
 function arrangeTools() {
   const info = el("instrumentHead");
-  if (skin === "silver") {
-    info.append(brand, statusChip);
-    if (orientation.matches) {
-      toolsPanel.append(connectButton, settingsButton);
-    } else {
-      header.insertBefore(settingsButton, toolsPanel);
-      header.insertBefore(connectButton, toolsPanel);
-    }
-    header.insertBefore(expandButton, toolsPanel);
+  info.append(brand, statusChip);
+  if (orientation.matches) {
+    toolsPanel.append(connectButton, settingsButton);
   } else {
-    header.prepend(brand);
-    toolbar.prepend(statusChip);
-    if (fullscreenActive) {
-      toolsPanel.prepend(connectButton);
-      toolsPanel.append(settingsButton, expandButton);
-    } else {
-      toolbar.appendChild(connectButton);
-      brand.appendChild(settingsButton);
-      header.insertBefore(expandButton, toolsPanel);
-    }
+    header.insertBefore(settingsButton, toolsPanel);
+    header.insertBefore(connectButton, toolsPanel);
   }
+  header.insertBefore(expandButton, toolsPanel);
   setToolsOpen(false);
 }
 function refreshSettings() {
@@ -558,15 +500,13 @@ function closeSettings() {
 }
 function placeStopButton() {
   let parent = document.querySelector(".actions");
-  if (skin === "silver") {
-    if (!el("settingsShade").hidden) parent = el("settingsPanel").querySelector(".dialogStopSlot");
-    else if (pickerIsOpen()) parent = el("picker").querySelector(".dialogStopSlot");
-  }
+  if (!el("settingsShade").hidden) parent = el("settingsPanel").querySelector(".dialogStopSlot");
+  else if (pickerIsOpen()) parent = el("picker").querySelector(".dialogStopSlot");
   if (el("stop").parentElement !== parent) parent.appendChild(el("stop"));
 }
 function applySkin() {
   document.body.dataset.skin = skin;
-  brand.querySelector(".race").src = skin === "silver" ? "icons/boat-navy.svg" : "race.png";
+  document.querySelector('meta[name="theme-color"]').content = skin === "navy" ? "#262d35" : "#edeae6";
   if (native) native.lightAppearance(skin === "silver");
   arrangeTools();
   placeStopButton();

@@ -28,8 +28,8 @@ public final class BoatActivity extends Activity {
     @Override public void onCreate(Bundle state) {
         super.onCreate(state);
         getWindow().setStatusBarColor(android.graphics.Color.TRANSPARENT);
-        getWindow().getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN | View.SYSTEM_UI_FLAG_LAYOUT_STABLE);
-        getWindow().setNavigationBarColor(0xff0b1930);
+        lightSkin = getPreferences(MODE_PRIVATE).getBoolean("lightSkin", true);
+        updateSystemBars();
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         BluetoothManager manager = getSystemService(BluetoothManager.class);
         adapter = manager == null ? null : manager.getAdapter();
@@ -41,7 +41,7 @@ public final class BoatActivity extends Activity {
             @Override public void connect(BluetoothDevice device) { BoatActivity.this.connect(device); }
         });
         web = new WebView(this);
-        web.setBackgroundColor(0xfff5f2ee);
+        web.setBackgroundColor(lightSkin ? 0xfff5f2ee : 0xff262d35);
         web.setOnApplyWindowInsetsListener((v, insets) -> {
             int top = insets.getSystemWindowInsetTop();
             if (top != insetTop) {
@@ -72,7 +72,14 @@ public final class BoatActivity extends Activity {
 
     public final class Bridge {
         @JavascriptInterface public void lightAppearance(boolean light) {
-            ui.post(() -> { lightSkin = light; updateSystemBars(); });
+            ui.post(() -> {
+                if (lightSkin != light) {
+                    lightSkin = light;
+                    getPreferences(MODE_PRIVATE).edit().putBoolean("lightSkin", light).apply();
+                    web.setBackgroundColor(light ? 0xfff5f2ee : 0xff262d35);
+                    updateSystemBars();
+                }
+            });
         }
         @JavascriptInterface public void openDevices() {
             ui.post(() -> { if (foreground && link == null) picker.open(); });
@@ -145,7 +152,7 @@ public final class BoatActivity extends Activity {
             flags |= View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR;
             if (Build.VERSION.SDK_INT >= 26) flags |= View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR;
         }
-        getWindow().setNavigationBarColor(lightSkin && Build.VERSION.SDK_INT >= 26 ? 0xffedeae6 : 0xff0b1930);
+        getWindow().setNavigationBarColor(lightSkin && Build.VERSION.SDK_INT >= 26 ? 0xffedeae6 : 0xff262d35);
         getWindow().getDecorView().setSystemUiVisibility(flags);
     }
     @Override public void onWindowFocusChanged(boolean hasFocus) {

@@ -2,9 +2,11 @@
 
 电子科技协会 2026 船模设计大赛的安卓遥控器与 51 单片机固件。手机通过 JDY-31 经典蓝牙串口控制双桨，STC89C52RC 通过软件 PWM 驱动 L298，实现前后调速、差速转弯和原地转向。
 
-**[下载 v1.8 安卓安装包](https://github.com/zhaozhongyu094-afk/baige-boat-control/releases/download/v1.8/Baige-Boat-Control-v1.8.apk)** · [发布页](https://github.com/zhaozhongyu094-afk/baige-boat-control/releases/tag/v1.8) · [船控固件](dist/BoatPWM.hex) · [SHA-256 校验值](dist/SHA256SUMS)
+**[下载 v1.8.1 安卓安装包](https://github.com/zhaozhongyu094-afk/baige-boat-control/releases/download/v1.8.1/Baige-Boat-Control-v1.8.1.apk)** · [发布页](https://github.com/zhaozhongyu094-afk/baige-boat-control/releases/tag/v1.8.1) · [船控固件](dist/BoatPWM.hex) · [SHA-256 校验值](dist/SHA256SUMS)
 
-「珍珠银」皮肤采用嵌入式双桨表窗和微凹拇指碟，显示模拟或真机模式及蓝牙状态。首次打开即可离线模拟。竖屏点右上角齿轮打开设置；横屏点省略号选择蓝牙或设置，旁边的圆钮用于全屏。松手会立即清零控制指令，拇指碟约 130 毫秒回到圆心。设置中可切换「深蓝金属」或选择旧版兼容模式。[竖屏模拟界面](docs/screens/pearl-portrait.png)
+「珍珠银」和「深蓝金属」共用嵌入式双桨表窗、微凹拇指碟和停桨键。在「设置 → 界面皮肤」可切换。深色皮肤以石墨灰区分面板与操控盘，浅钢蓝指针显示当前桨力。[深色竖屏](docs/screens/graphite-portrait.png) · [深色横屏](docs/screens/graphite-landscape.png) · [珍珠银竖屏](docs/screens/pearl-portrait.png)
+
+首次打开即可离线模拟。竖屏点右上角齿轮打开设置，横屏点省略号选择蓝牙或设置，旁边的圆钮用于全屏。松手会立即清零控制指令，拇指碟约 130 毫秒回到圆心。
 
 ![珍珠银皮肤的横屏离线模拟，左侧为双桨指针表和停桨键，右侧为微凹拇指碟](docs/screens/pearl-landscape.png)
 

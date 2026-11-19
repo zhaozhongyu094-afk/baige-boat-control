@@ -34,7 +34,7 @@
 .swatches input { margin: 0; grid-row: 2; }
 .sample { grid-column: 1 / -1; height: 31px; border-radius: 6px; }
 .silverSample { background: radial-gradient(circle at 77% 50%,#1067df 0 8%,#a8bdd9 9%,transparent 11%),linear-gradient(120deg,#f6f8fc,#c9d3e1); }
-.navySample { background: radial-gradient(circle at 77% 50%,#517da9 0 8%,#9badc1 9%,transparent 11%),linear-gradient(120deg,#4b6a86,#162c47); }
+.navySample { background: radial-gradient(circle at 76% 50%,#6486a3 8%,#a8b8c6 9%,transparent 10%),linear-gradient(120deg,#4a5460,#272e36); }
 .settingRow { display: flex; align-items: center; gap: 12px; justify-content: space-between; min-height: 56px; padding: 10px 0; border-top: 1px solid var(--rule); cursor: pointer; }
 .settingRow b, .settingRow small { display: block; }
 .settingRow b { font-size: 15px; }
