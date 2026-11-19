@@ -93,18 +93,20 @@
       >
         <div class="sheetHead">
           <div>
-            <p>已配对 · JDY-31-SPP</p>
+            <p>经典蓝牙 · JDY-31-SPP</p>
             <h2 id="pickerTitle">连接船模</h2>
           </div>
           <button id="closePicker" class="icon" aria-label="关闭设备列表">
             <img src="icons/x.svg" alt="" />
           </button>
         </div>
-        <div id="devices" aria-live="polite"></div>
+        <p id="searchStatus" role="status" hidden></p>
+        <div id="devices"></div>
         <div class="sheetFooter">
-          <button id="settings">系统蓝牙设置</button
-          ><button id="again" class="icon" aria-label="刷新设备列表">
-            <img src="icons/arrow-clockwise.svg" alt="" /></button
+          <button id="again">
+            <img src="icons/arrow-clockwise.svg" alt="" /><span id="searchLabel"
+              >搜索设备</span
+            ></button
           ><button id="simulate" class="primary">继续模拟</button>
         </div>
       </section>

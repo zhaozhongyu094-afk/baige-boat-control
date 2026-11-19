@@ -1,19 +1,15 @@
 package cn.eta.boat;
 
-import android.Manifest;
 import android.app.Activity;
 import android.content.Intent;
 import android.content.pm.ActivityInfo;
-import android.provider.Settings;
 import android.view.View;
 import android.bluetooth.*;
-import android.content.pm.PackageManager;
 import android.os.*;
 import android.view.WindowManager;
 import android.webkit.*;
 import org.json.JSONObject;
 import org.json.JSONArray;
-import java.util.*;
 
 public final class BoatActivity extends Activity {
     private final Handler ui = new Handler(Looper.getMainLooper());
@@ -22,7 +18,7 @@ public final class BoatActivity extends Activity {
     private BoatLink link;
     private int generation;
     private boolean foreground, immersive;
-    private boolean settingsOpened;
+    private BoatPicker picker;
     private boolean pageReady;
     private int insetTop;
 
@@ -34,6 +30,13 @@ public final class BoatActivity extends Activity {
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         BluetoothManager manager = getSystemService(BluetoothManager.class);
         adapter = manager == null ? null : manager.getAdapter();
+        picker = new BoatPicker(this, adapter, new BoatPicker.Listener() {
+            @Override public void display(JSONArray rows, String message, String action, boolean busy) {
+                web.evaluateJavascript("window.boatDevices && boatDevices(" + rows + "," + JSONObject.quote(message)
+                        + "," + JSONObject.quote(action) + "," + busy + ")", null);
+            }
+            @Override public void connect(BluetoothDevice device) { BoatActivity.this.connect(device); }
+        });
         web = new WebView(this);
         web.setBackgroundColor(0xff233b56);
         web.setOnApplyWindowInsetsListener((v, insets) -> {
@@ -64,36 +67,15 @@ public final class BoatActivity extends Activity {
     }
 
     public final class Bridge {
-        @JavascriptInterface public void listDevices(boolean request) {
-            ui.post(() -> { if (foreground && link == null) showDevices(request); });
+        @JavascriptInterface public void openDevices() {
+            ui.post(() -> { if (foreground && link == null) picker.open(); });
         }
+        @JavascriptInterface public void searchDevices() {
+            ui.post(() -> { if (foreground && link == null) picker.search(); });
+        }
+        @JavascriptInterface public void closeDevices() { ui.post(picker::close); }
         @JavascriptInterface public void connectTo(String address) {
-            ui.post(() -> {
-                if (!foreground || link != null) return;
-                try {
-                    if (adapter != null && adapter.isEnabled()) {
-                        for (BluetoothDevice d : adapter.getBondedDevices()) {
-                            if (d.getAddress().equals(address) && acceptsModule(d.getName(), d.getType())) {
-                                connect(d);
-                                return;
-                            }
-                        }
-                    }
-                    state("closed", "设备已不可用，请重新选择");
-                } catch (SecurityException ex) { state("closed", "请在系统设置中允许附近设备权限"); }
-            });
-        }
-        @JavascriptInterface public void settings() {
-            ui.post(() -> {
-                if (!foreground || link != null) return;
-                try {
-                    settingsOpened = true;
-                    startActivity(new Intent(Settings.ACTION_BLUETOOTH_SETTINGS));
-                } catch (android.content.ActivityNotFoundException e) {
-                    settingsOpened = false;
-                    devices(new JSONArray(), "请在系统设置中打开蓝牙");
-                }
-            });
+            ui.post(() -> { if (foreground && link == null) picker.select(address); });
         }
         @JavascriptInterface public void disconnectBoat() {
             ui.post(() -> { if (link != null) disconnect("已断开设备"); });
@@ -114,36 +96,13 @@ public final class BoatActivity extends Activity {
     private void state(String kind,String detail) {
         web.evaluateJavascript("window.boatLink && boatLink("+JSONObject.quote(kind)+","+JSONObject.quote(detail)+","+generation+")",null);
     }
-    private void devices(JSONArray items, String message) {
-        web.evaluateJavascript("window.boatDevices && boatDevices("+items+","+JSONObject.quote(message)+")",null);
-    }
-    private void showDevices(boolean request) {
-        JSONArray items = new JSONArray();
-        if (adapter == null) { devices(items, "此设备没有蓝牙，可继续模拟操控。"); return; }
-        if (Build.VERSION.SDK_INT >= 31 && checkSelfPermission(Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
-            if (request) requestPermissions(new String[]{Manifest.permission.BLUETOOTH_CONNECT}, 1);
-            else devices(items, "请允许附近设备权限，或继续模拟操控。");
-            return;
-        }
-        try {
-            if (!adapter.isEnabled()) { devices(items, "系统蓝牙尚未开启。"); return; }
-            List<BluetoothDevice> paired = new ArrayList<>(adapter.getBondedDevices());
-            Collections.sort(paired,(a,b)->a.getAddress().compareTo(b.getAddress()));
-            for (BluetoothDevice d : paired) {
-                String name = d.getName();
-                if (acceptsModule(name, d.getType())) {
-                    items.put(new JSONArray().put(name).put(d.getAddress()));
-                }
-            }
-            devices(items,items.length()==0 ? "没有已配对的 JDY-31-SPP。请在系统蓝牙设置中配对同名模块，再点刷新。" : "");
-        } catch (SecurityException ex) { devices(items, "读取设备需要附近设备权限。"); }
-    }
     @Override public void onRequestPermissionsResult(int code,String[] permissions,int[] results) {
         super.onRequestPermissionsResult(code,permissions,results);
-        if (code == 1) showDevices(false);
+        if (code == BoatPicker.PERMISSIONS) picker.permissionsReturned(results);
     }
-    static boolean acceptsModule(String name, int deviceType) {
-        return deviceType != BluetoothDevice.DEVICE_TYPE_LE && "JDY-31-SPP".equalsIgnoreCase(name);
+    @Override protected void onActivityResult(int code,int result,Intent data) {
+        super.onActivityResult(code,result,data);
+        if (code == BoatPicker.ENABLE) picker.enableReturned(result == RESULT_OK);
     }
     private static String deviceName(BluetoothDevice d) {
         String name = d.getName();
@@ -197,15 +156,21 @@ public final class BoatActivity extends Activity {
         if(link!=null) { link.close(); link=null; }
         state("closed",why);
     }
-    @Override protected void onResume() { super.onResume(); foreground=true; web.onResume();
-        if (settingsOpened) { settingsOpened=false; showDevices(false); } }
+    @Override protected void onResume() {
+        super.onResume(); foreground=true; web.onResume(); picker.resume();
+    }
+    @Override protected void onStop() {
+        picker.stop(); super.onStop();
+    }
     @Override protected void onPause() {
         foreground=false;
+        picker.pause();
         if (pageReady) web.evaluateJavascript("window.boatSuspend && boatSuspend()",null);
         if(link!=null) disconnect("已断开，重新连接后可操控");
         web.onPause(); super.onPause();
     }
     @Override protected void onDestroy() {
+        picker.destroy();
         if(link!=null) link.close();
         ui.removeCallbacksAndMessages(null); web.removeJavascriptInterface("BoatRadio"); web.destroy(); super.onDestroy();
     }

@@ -1235,3 +1235,18 @@ body.full #glassTools[aria-hidden="false"] {
     transition: none;
   }
 }
+
+#searchStatus {
+  margin: 12px 0 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: #dbeafa;
+}
+#searchStatus:not([hidden]) + #devices {
+  margin-top: 9px;
+}
+.sheetFooter button:disabled,
+.device:disabled {
+  opacity: 0.62;
+  cursor: default;
+}

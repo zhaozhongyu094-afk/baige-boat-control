@@ -189,19 +189,20 @@ function setPickerOpen(open) {
 function closePicker(focus = true) {
   if (!pickerIsOpen()) return;
   setPickerOpen(false);
+  if (native) native.closeDevices();
   if (focus) (fullscreenActive ? el("menuDisc") : el("connect")).focus();
 }
-window.boatDevices = (items, message) => {
+window.boatDevices = (items, message, action = "搜索设备", busy = false) => {
   if (!pickerIsOpen()) return;
   const list = el("devices");
+  const status = el("searchStatus");
+  status.textContent = message || "";
+  status.hidden = !message;
+  el("searchLabel").textContent = action;
+  el("again").disabled = busy;
   list.replaceChildren();
-  if (!items.length) {
-    const note = document.createElement("p");
-    note.className = "empty";
-    note.textContent = message || "没有已配对的 JDY-31-SPP。";
-    list.appendChild(note);
-  }
-  for (const [name, address] of items) {
+  const pairing = items.some((row) => row[3]);
+  for (const [name, address, bonded, pending] of items) {
     const row = document.createElement("button");
     row.className = "device";
     const icon = new Image();
@@ -212,24 +213,22 @@ window.boatDevices = (items, message) => {
       sub = document.createElement("small"),
       action = document.createElement("em");
     title.textContent = name;
-    sub.textContent = address;
-    action.textContent = "连接";
+    sub.textContent = (bonded ? "已配对" : "附近设备") + " · " + address;
+    action.textContent = pending ? "配对中…" : bonded ? "连接" : "配对并连接";
+    row.disabled = pairing;
     body.append(title, sub);
     row.append(icon, body, action);
     row.onclick = () => {
       stop();
-      stateName = "connecting";
-      closePicker();
-      label("正在连接");
       native.connectTo(address);
     };
     list.appendChild(row);
   }
 };
-function loadPaired() {
+function openDevices() {
   if (native) {
     window.boatDevices([], "正在读取已配对设备…");
-    native.listDevices(true);
+    native.openDevices();
   } else
     window.boatDevices(
       [],
@@ -244,14 +243,12 @@ el("connect").onclick = () => {
     return;
   }
   setPickerOpen(true);
-  el("settings").hidden = !native;
   el("again").hidden = !native;
   el("closePicker").focus();
-  loadPaired();
+  openDevices();
 };
-el("again").onclick = loadPaired;
-el("settings").onclick = () => {
-  if (native) native.settings();
+el("again").onclick = () => {
+  if (native) native.searchDevices();
 };
 el("shade").onclick = (e) => {
   if (e.target === el("shade")) closePicker();
