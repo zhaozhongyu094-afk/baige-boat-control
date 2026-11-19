@@ -279,24 +279,40 @@ body.full main {
   grid-template-columns: minmax(0, 1fr) minmax(0, 1.22fr) minmax(76px, 0.26fr);
   gap: 6px;
 }
+
 #shade {
   position: fixed;
   inset: 0;
-  z-index: 5;
+  z-index: 6;
   display: flex;
+  align-items: center;
   justify-content: flex-end;
-  background: #010a19ac;
+  padding: max(10px, var(--status-inset, 0px))
+    max(12px, env(safe-area-inset-right)) max(10px, env(safe-area-inset-bottom))
+    12px;
+  background: rgb(6 18 35 / 32%);
 }
 #picker {
+  position: relative;
+  isolation: isolate;
   display: flex;
   flex-direction: column;
-  width: min(400px, 82vw);
-  padding: 22px;
-  color: #f6f8ff;
-  background: #102440;
-  border-left: 1px solid #47648c;
-  box-shadow: -8px 0 35px #02081855;
+  width: min(385px, 90vw);
+  max-height: 100%;
+  height: min(430px, 100%);
+  padding: 20px;
+  overflow: hidden;
+  border-radius: 25px;
+  color: #f4f8ff;
+  background: var(--lens-film), linear-gradient(145deg, #2c4a6699, #152d48a1);
+  border: 1px solid #d3e8ff77;
+  box-shadow:
+    var(--lens-shade),
+    0 12px 38px #07182944;
+  -webkit-backdrop-filter: blur(8px) saturate(1.3);
+  backdrop-filter: blur(8px) saturate(1.3);
 }
+
 .sheetHead,
 .sheetFooter {
   display: flex;
@@ -711,14 +727,30 @@ body.full #glassTools button {
   background: #eef6ff;
   border-radius: 50%;
 }
-#menuDisc[aria-expanded="true"] .dots,
-#menuDisc[aria-expanded="false"] .closeMark {
-  display: none;
+
+#menuDisc .dots,
+#menuDisc .closeMark {
+  position: absolute;
+  pointer-events: none;
+  transition:
+    opacity 140ms ease,
+    transform 230ms cubic-bezier(0.2, 0.65, 0.22, 1);
 }
 #menuDisc .closeMark {
   width: 18px;
   height: 18px;
+  opacity: 0;
+  transform: rotate(-45deg) scale(0.7);
 }
+#menuDisc[aria-expanded="true"] .closeMark {
+  opacity: 1;
+  transform: rotate(0deg) scale(1);
+}
+#menuDisc[aria-expanded="true"] .dots {
+  opacity: 0;
+  transform: rotate(35deg) scale(0.65);
+}
+
 header #glassTools[hidden] {
   display: none !important;
 }
@@ -786,6 +818,7 @@ body.regular header,
   isolation: isolate;
 }
 body.regular header::before,
+#picker::before,
 #glassTools::before {
   content: "";
   position: absolute;
@@ -805,6 +838,7 @@ body.regular header::before,
   mask-composite: exclude;
 }
 body.regular header::after,
+#picker::after,
 #glassTools::after {
   content: "";
   position: absolute;
@@ -1023,4 +1057,113 @@ body.regular.portrait .actions p {
 }
 body.regular.portrait .actions #stop {
   min-height: 53px;
+}
+
+/* Keep the glass anchored to the same 44px touch target throughout the morph. */
+body.full header {
+  width: 44px;
+}
+body.regular #glassTools {
+  display: none;
+}
+body.full #glassTools {
+  position: absolute;
+  right: 48px;
+  top: 50%;
+  width: max-content;
+  transform-origin: right center;
+  transform: translate(26px, -50%) scale(0.09, 0.77);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition:
+    transform 235ms cubic-bezier(0.42, 0, 0.72, 0.4),
+    opacity 175ms ease-in,
+    visibility 0s linear 235ms;
+}
+body.full #glassTools[aria-hidden="false"] {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  transform: translate(0, -50%) scale(1);
+  transition:
+    transform 340ms cubic-bezier(0.16, 0.88, 0.25, 1.1),
+    opacity 180ms ease-out,
+    visibility 0s;
+}
+#menuDisc::before {
+  transform-origin: right center;
+  transition: transform 290ms cubic-bezier(0.2, 0.85, 0.3, 1.13);
+}
+#menuDisc[aria-expanded="true"]::before {
+  transform: scale(1.09, 0.97);
+}
+.sheetHead p {
+  color: #bed3ee;
+  letter-spacing: 0.045em;
+}
+#devices {
+  border-top-color: #c7dcf24a;
+}
+.device {
+  gap: 12px;
+  min-height: 62px;
+  border-bottom-color: #c7dcf230;
+}
+.device:active {
+  background: #e7f4ff17;
+}
+.device img {
+  width: 32px;
+  height: 32px;
+  padding: 5px;
+  border: 1px solid #cbe3ff40;
+  border-radius: 9px;
+  background: #b9dfff10;
+}
+.device b {
+  font-size: 15px;
+  line-height: 1.4;
+  color: #fff;
+}
+.device small {
+  color: #d3e4f4;
+}
+.device em {
+  padding: 5px 10px;
+  border: 1px solid #c2ddff55;
+  border-radius: 14px;
+  color: #e7f3ff;
+}
+.sheetFooter {
+  border-top: 1px solid #c6dbef3d;
+  padding-top: 11px;
+}
+.sheetFooter button {
+  background: linear-gradient(148deg, #c6e8ff21, #29496542);
+  border: 1px solid #c6ddf561;
+  border-radius: 15px;
+}
+.sheetFooter .primary {
+  background: linear-gradient(148deg, #8fbbef37, #41668d55);
+  border-color: #c6ddf57a;
+}
+@media (orientation: portrait) {
+  #shade {
+    align-items: flex-end;
+    justify-content: center;
+  }
+  #picker {
+    width: 100%;
+    height: min(58dvh, 440px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  body.full #glassTools,
+  body.full #glassTools[aria-hidden="false"],
+  #menuDisc::before,
+  #menuDisc .dots,
+  #menuDisc .closeMark {
+    transition: none;
+  }
 }

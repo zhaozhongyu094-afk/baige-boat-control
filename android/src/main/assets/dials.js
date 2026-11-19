@@ -46,7 +46,7 @@ function paintDial(index, value) {
   chrome.addColorStop(0.78, "#dce9f7");
   chrome.addColorStop(1, "#637e9f");
   strokeArc(r, lo, hi, chrome, 2.3);
-  strokeArc(r - 7, lo, hi, "#294762", 11);
+  strokeArc(r - 7, lo, hi, "#345473", 11);
   if (value) {
     const active = c.createLinearGradient(47, 46, 266, 138);
     active.addColorStop(0, "#3d78c3");

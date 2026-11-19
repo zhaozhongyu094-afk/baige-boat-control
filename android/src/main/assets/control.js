@@ -186,7 +186,7 @@ window.boatDevices = (items, message) => {
   if (!items.length) {
     const note = document.createElement("p");
     note.className = "empty";
-    note.textContent = message || "暂无已配对设备。";
+    note.textContent = message || "没有已配对的 JDY-31-SPP。";
     list.appendChild(note);
   }
   for (const [name, address] of items) {
@@ -262,23 +262,33 @@ function refreshOrientation() {
 }
 function setToolsOpen(open) {
   const visible = fullscreenActive && open;
-  toolsPanel.hidden = !visible;
+  toolsPanel.hidden = !fullscreenActive;
+  toolsPanel.setAttribute("aria-hidden", String(!visible));
+  toolsPanel.toggleAttribute("inert", !visible);
+  // Older WebViews do not implement inert. Keep closed tools out of keyboard navigation.
+  for (const button of [connectButton, expandButton]) {
+    if (fullscreenActive && !visible) button.tabIndex = -1;
+    else button.removeAttribute("tabindex");
+  }
   menuButton.setAttribute("aria-expanded", String(visible));
   menuButton.setAttribute(
     "aria-label",
     visible ? "收起全屏工具" : "展开全屏工具",
   );
 }
-menuButton.addEventListener("click", () => setToolsOpen(toolsPanel.hidden));
+function toolsAreOpen() {
+  return menuButton.getAttribute("aria-expanded") === "true";
+}
+menuButton.addEventListener("click", () => setToolsOpen(!toolsAreOpen()));
 document.addEventListener("pointerdown", (event) => {
-  if (!toolsPanel.hidden && !header.contains(event.target)) setToolsOpen(false);
+  if (toolsAreOpen() && !header.contains(event.target)) setToolsOpen(false);
 });
 window.boatBack = () => {
   if (!el("shade").hidden) {
     closePicker();
     return true;
   }
-  if (!toolsPanel.hidden) {
+  if (toolsAreOpen()) {
     setToolsOpen(false);
     menuButton.focus();
     return true;
@@ -293,7 +303,8 @@ window.boatFullscreen = (enabled) => {
   if (fullscreenActive !== enabled) {
     stop();
     fullscreenActive = enabled;
-    setToolsOpen(false);
+    document.body.classList.toggle("regular", !enabled);
+    document.body.classList.toggle("full", enabled);
     if (enabled) {
       toolsPanel.prepend(connectButton);
       toolsPanel.appendChild(expandButton);
@@ -301,9 +312,8 @@ window.boatFullscreen = (enabled) => {
       toolbar.appendChild(connectButton);
       header.insertBefore(expandButton, toolsPanel);
     }
+    setToolsOpen(false);
   }
-  document.body.classList.toggle("regular", !enabled);
-  document.body.classList.toggle("full", enabled);
   const label = enabled ? "退出全屏" : "进入全屏";
   expandButton.setAttribute("aria-label", label);
   expandButton.title = label;

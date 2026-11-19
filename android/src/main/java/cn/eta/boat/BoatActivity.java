@@ -73,7 +73,7 @@ public final class BoatActivity extends Activity {
                 try {
                     if (adapter != null && adapter.isEnabled()) {
                         for (BluetoothDevice d : adapter.getBondedDevices()) {
-                            if (d.getAddress().equals(address) && d.getType() != BluetoothDevice.DEVICE_TYPE_LE) {
+                            if (d.getAddress().equals(address) && acceptsModule(d.getName(), d.getType())) {
                                 connect(d);
                                 return;
                             }
@@ -128,17 +128,22 @@ public final class BoatActivity extends Activity {
         try {
             if (!adapter.isEnabled()) { devices(items, "系统蓝牙尚未开启。"); return; }
             List<BluetoothDevice> paired = new ArrayList<>(adapter.getBondedDevices());
-            Collections.sort(paired,(a,b)->deviceName(a).compareToIgnoreCase(deviceName(b)));
+            Collections.sort(paired,(a,b)->a.getAddress().compareTo(b.getAddress()));
             for (BluetoothDevice d : paired) {
-                if (d.getType() == BluetoothDevice.DEVICE_TYPE_LE) continue;
-                items.put(new JSONArray().put(deviceName(d)).put(d.getAddress()));
+                String name = d.getName();
+                if (acceptsModule(name, d.getType())) {
+                    items.put(new JSONArray().put(name).put(d.getAddress()));
+                }
             }
-            devices(items,items.length()==0 ? "尚无已配对的串口设备。请先在系统蓝牙设置中配对船模。" : "");
+            devices(items,items.length()==0 ? "没有已配对的 JDY-31-SPP。请在系统蓝牙设置中配对同名模块，再点刷新。" : "");
         } catch (SecurityException ex) { devices(items, "读取设备需要附近设备权限。"); }
     }
     @Override public void onRequestPermissionsResult(int code,String[] permissions,int[] results) {
         super.onRequestPermissionsResult(code,permissions,results);
         if (code == 1) showDevices(false);
+    }
+    static boolean acceptsModule(String name, int deviceType) {
+        return deviceType != BluetoothDevice.DEVICE_TYPE_LE && "JDY-31-SPP".equalsIgnoreCase(name);
     }
     private static String deviceName(BluetoothDevice d) {
         String name = d.getName();

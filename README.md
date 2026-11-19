@@ -1,8 +1,8 @@
-# 百舸船控 v1.2
+# 百舸船控 v1.3
 
 电子科技协会 2026 船模设计大赛的安卓遥控器与 51 单片机固件。手机通过 JDY-31 经典蓝牙串口控制双桨，STC89C52RC 通过软件 PWM 驱动 L298，实现前后调速、差速转弯和原地转向。
 
-**[下载安卓安装包](https://github.com/zhaozhongyu094-afk/baige-boat-control/releases/download/v1.2/Baige-Boat-Control-v1.2.apk)** · **[下载船控固件](https://github.com/zhaozhongyu094-afk/baige-boat-control/releases/download/v1.2/BoatPWM.hex)** · [查看 v1.2 发布页](https://github.com/zhaozhongyu094-afk/baige-boat-control/releases/tag/v1.2)
+**[安卓安装包](dist/Baige-Boat-Control-v1.3.apk)** · **[船控固件](dist/BoatPWM.hex)** · [校验值](dist/SHA256SUMS)
 
 ![百舸船控全屏模拟界面，左侧为双桨 PWM 仪表和停车键，右侧为摇杆](docs/screens/fullscreen.png)
 
@@ -15,7 +15,7 @@
 ## 连接船模
 
 1. 用 STC-ISP 将 `dist/BoatPWM.hex` 烧录到 STC89C52RC。固件按 **11.0592 MHz、12T** 配置，JDY-31 串口使用 **9600、8N1**。
-2. 在安卓系统蓝牙设置中配对船上的 JDY-31。打开「百舸船控」，点「连接设备」并选择对应模块。
+2. 在安卓系统蓝牙设置中配对船上的 JDY-31。打开「百舸船控」，点「连接设备」并选择对应模块。列表只显示名称完整匹配 JDY-31-SPP 的已配对经典蓝牙设备，忽略大小写。同名模块可按蓝牙地址区分。连接界面见 [液态玻璃设备列表](docs/screens/device-picker.png)（图中地址为测试示例）。
 3. 手机收到船端中位回执后进入就绪状态。首次联调先卸桨，检查正反转、左右转向、松手和断开连接后的停车表现。
 
 P2.0、P2.1 接 L298 的 IN1、IN2 控制右桨，P2.2、P2.3 接 IN3、IN4 控制左桨。软件 PWM 约为 125 Hz，每侧正反各 32 个非零占空比。面板读数是下发的 PWM 指令。控制帧、回执、序号、CRC 和失联停车机制见 [通信协议](docs/protocol.md)。
