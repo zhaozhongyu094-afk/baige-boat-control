@@ -1,0 +1,4 @@
+*.apk binary
+*.hex -text
+*.png binary
+*.webp binary

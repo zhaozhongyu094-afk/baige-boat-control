@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width,initial-scale=1,viewport-fit=cover"
+    />
+    <meta name="theme-color" content="#091a35" />
+    <title>百舸船控</title>
+    <link rel="stylesheet" href="control.css" />
+  </head>
+  <body class="regular">
+    <header>
+      <div class="brand">
+        <img
+          class="association"
+          src="association.svg"
+          alt="电子科技协会"
+        /><span class="divider"></span
+        ><img class="race" src="race.png" alt="船赛标志" />
+        <h1>百舸船控</h1>
+      </div>
+      <div class="toolbar">
+        <span class="status"
+          ><img id="modeIcon" src="icons/monitor.svg" alt="" /><span id="status"
+            >离线模拟</span
+          ></span
+        ><button id="connect" class="primary">
+          <img src="icons/bluetooth.svg" alt="" /><span id="connectLabel"
+            >连接设备</span
+          >
+        </button>
+      </div>
+      <button id="expand" aria-label="进入全屏" title="进入全屏">
+        <img id="expandIcon" src="icons/corners-out.svg" alt="" /><span
+          id="exitLabel"
+          >退出全屏</span
+        >
+      </button>
+      <div id="glassTools" role="group" aria-label="全屏工具" hidden>
+        <i class="sep" aria-hidden="true"></i>
+      </div>
+      <button
+        id="menuDisc"
+        type="button"
+        aria-label="展开全屏工具"
+        aria-controls="glassTools"
+        aria-expanded="false"
+      >
+        <span class="dots" aria-hidden="true"><i></i><i></i><i></i></span
+        ><img class="closeMark" src="icons/x.svg" alt="" />
+      </button>
+    </header>
+    <main>
+      <section class="gauges" aria-label="双桨 PWM 输出">
+        <figure>
+          <figcaption>左桨</figcaption>
+          <canvas id="leftDial" aria-hidden="true"></canvas
+          ><strong id="lv">0<small>%</small></strong
+          ><span>PWM 输出</span>
+        </figure>
+        <figure>
+          <figcaption>右桨</figcaption>
+          <canvas id="rightDial" aria-hidden="true"></canvas
+          ><strong id="rv">0<small>%</small></strong
+          ><span>PWM 输出</span>
+        </figure>
+      </section>
+      <section class="steering" aria-label="遥控摇杆">
+        <div
+          id="pad"
+          tabindex="0"
+          role="group"
+          aria-label="拖动摇杆或按方向键，松手回中"
+        >
+          <img id="stick" src="thumb.webp" alt="" draggable="false" />
+        </div>
+      </section>
+      <aside class="actions">
+        <p id="hint">松手回中</p>
+        <button id="stop" class="primary">
+          <img src="icons/stop.svg" alt="" />停车
+        </button>
+      </aside>
+    </main>
+    <div id="shade" hidden>
+      <section
+        id="picker"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="pickerTitle"
+      >
+        <div class="sheetHead">
+          <div>
+            <p>蓝牙串口</p>
+            <h2 id="pickerTitle">已配对设备</h2>
+          </div>
+          <button id="closePicker" class="icon" aria-label="关闭设备列表">
+            <img src="icons/x.svg" alt="" />
+          </button>
+        </div>
+        <div id="devices" aria-live="polite"></div>
+        <div class="sheetFooter">
+          <button id="settings">系统蓝牙设置</button
+          ><button id="again" class="icon" aria-label="刷新设备列表">
+            <img src="icons/arrow-clockwise.svg" alt="" /></button
+          ><button id="simulate" class="primary">继续模拟</button>
+        </div>
+      </section>
+    </div>
+    <script src="protocol.js"></script>
+    <script src="dials.js"></script>
+    <script src="control.js"></script>
+  </body>
+</html>
